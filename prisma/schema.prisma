@@ -1,0 +1,43 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Papel {
+  CLIENTE
+  DONO_SALAO
+  ADMIN
+}
+
+model Usuario {
+  id        String   @id @default(cuid())
+  nome      String
+  email     String   @unique
+  telefone  String?
+  // Nulo quando a conta foi criada por login social (Google)
+  senhaHash String?
+  papel     Papel    @default(CLIENTE)
+  imagem    String?
+  criadoEm  DateTime @default(now())
+
+  contas Conta[]
+
+  @@map("usuarios")
+}
+
+// Vínculo com um provedor externo (ex.: Google), usado no login social
+model Conta {
+  id                String @id @default(cuid())
+  usuarioId         String
+  provedor          String
+  idNoProvedor      String
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@unique([provedor, idNoProvedor])
+  @@map("contas")
+}
