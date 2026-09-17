@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Baby, Brush, MapPin, Scissors, Search, Sparkles } from "lucide-react";
+import { Baby, Hand, MapPin, Paintbrush, Scissors, Search, Sparkles, SprayCan } from "lucide-react";
 import { auth } from "@/auth";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -9,9 +9,9 @@ export const metadata: Metadata = { title: "Início | MeuSalão" };
 // Sprint 2+: as categorias virão do banco, junto com a busca de salões.
 const CATEGORIAS = [
   { nome: "Corte", Icone: Scissors },
-  { nome: "Coloração", Icone: Brush },
-  { nome: "Manicure", Icone: Sparkles },
-  { nome: "Barba", Icone: Scissors },
+  { nome: "Coloração", Icone: Paintbrush },
+  { nome: "Manicure", Icone: Hand },
+  { nome: "Barba", Icone: SprayCan },
   { nome: "Estética", Icone: Sparkles },
   { nome: "Infantil", Icone: Baby },
 ];
@@ -30,15 +30,24 @@ export default async function InicioPage() {
           </h1>
 
           {/* Sprint 2: este campo passa a buscar salões por nome e serviço. */}
-          <div className="relative mt-8 max-w-xl">
-            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
-            <Input
-              type="search"
-              placeholder="Buscar salão ou serviço"
-              aria-label="Buscar salão ou serviço"
-              className="h-12 pl-9"
-              disabled
-            />
+          <div className="mt-8 max-w-xl">
+            <div className="relative">
+              <Search
+                className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+                aria-hidden
+              />
+              <Input
+                type="search"
+                placeholder="Buscar salão ou serviço"
+                aria-label="Buscar salão ou serviço"
+                aria-describedby="busca-indisponivel"
+                className="h-12 border-transparent bg-card pl-9 disabled:cursor-not-allowed disabled:opacity-100"
+                disabled
+              />
+            </div>
+            <p id="busca-indisponivel" className="mt-2 text-sm text-white/70">
+              A busca por salões chega na próxima entrega.
+            </p>
           </div>
         </div>
       </header>
