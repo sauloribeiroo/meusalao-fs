@@ -13,12 +13,31 @@ const ESTADO_INICIAL: EstadoFormulario = {};
 export function FormularioCadastro() {
   const [estado, action] = useActionState(cadastrarAction, ESTADO_INICIAL);
   const erros = estado.erros ?? {};
+  const valores = estado.valores ?? {};
 
   return (
-    <form action={action} className="space-y-4" noValidate>
-      <Campo label="Nome" name="nome" autoComplete="name" required erro={erros.nome?.[0]} />
-      <Campo label="E-mail" name="email" type="email" autoComplete="email" required erro={erros.email?.[0]} />
-      <Campo label="Telefone (opcional)" name="telefone" type="tel" autoComplete="tel" erro={erros.telefone?.[0]} />
+    // key: o React limpa formulários não controlados depois de uma action.
+    // Recriar os campos com os valores devolvidos evita que o usuário perca
+    // o que já tinha digitado quando a validação falha.
+    <form key={JSON.stringify(valores)} action={action} className="space-y-4" noValidate>
+      <Campo label="Nome" name="nome" autoComplete="name" required defaultValue={valores.nome} erro={erros.nome?.[0]} />
+      <Campo
+        label="E-mail"
+        name="email"
+        type="email"
+        autoComplete="email"
+        required
+        defaultValue={valores.email}
+        erro={erros.email?.[0]}
+      />
+      <Campo
+        label="Telefone (opcional)"
+        name="telefone"
+        type="tel"
+        autoComplete="tel"
+        defaultValue={valores.telefone}
+        erro={erros.telefone?.[0]}
+      />
       <Campo
         label="Senha"
         name="senha"

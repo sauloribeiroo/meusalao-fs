@@ -2,6 +2,7 @@ import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
 import { authConfig } from "@/auth.config";
+import { ErroDeCredenciais } from "@/services/erros";
 import { autenticarUsuario, buscarUsuarioPorId, vincularContaSocial } from "@/services/usuarios/usuarios.service";
 
 // Os campos extras de Session e JWT ficam em src/types/next-auth.d.ts.
@@ -14,11 +15,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
     Credentials({
       credentials: { email: {}, senha: {} },
-      // Um erro aqui vira CredentialsSignin no Auth.js, e a UI o traduz em
-      // "e-mail ou senha incorretos".
       authorize: async (credenciais) => {
-        const usuario = await autenticarUsuario(credenciais);
-        return { id: usuario.id, name: usuario.nome, email: usuario.email, image: usuario.imagem };
+        try {
+          const usuario = await autenticarUsuario(credenciais);
+          return { id: usuario.id, name: usuario.nome, email: usuario.email, image: usuario.imagem };
+        } catch (erro) {
+          // null vira CredentialsSignin, que a UI traduz em "e-mail ou senha
+          // incorretos". Se a exceção subisse, o Auth.js a embrulharia em
+          // CallbackRouteError e o usuário veria um erro genérico.
+          if (erro instanceof ErroDeCredenciais) return null;
+          throw erro;
+        }
       },
     }),
     ...(googleHabilitado ? [Google({ allowDangerousEmailAccountLinking: true })] : []),

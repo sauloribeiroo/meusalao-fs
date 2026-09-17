@@ -12,10 +12,13 @@ const ESTADO_INICIAL: EstadoFormulario = {};
 
 export function FormularioLogin() {
   const [estado, action] = useActionState(entrarAction, ESTADO_INICIAL);
+  const valores = estado.valores ?? {};
 
   return (
-    <form action={action} className="space-y-4" noValidate>
-      <Campo label="E-mail" name="email" type="email" autoComplete="email" required />
+    // key: o React limpa o formulário depois da action; assim o e-mail
+    // digitado continua na tela quando a senha está errada.
+    <form key={JSON.stringify(valores)} action={action} className="space-y-4" noValidate>
+      <Campo label="E-mail" name="email" type="email" autoComplete="email" required defaultValue={valores.email} />
       <Campo label="Senha" name="senha" type="password" autoComplete="current-password" required />
 
       {estado.mensagem && <AlertaErro>{estado.mensagem}</AlertaErro>}
