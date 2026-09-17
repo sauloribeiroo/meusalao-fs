@@ -83,15 +83,32 @@ Pré-requisitos: Node.js LTS (20+) e um PostgreSQL acessível (Docker local ou s
 
 ```bash
 npm install
-cp .env.example .env     # preencha DATABASE_URL e AUTH_SECRET
+cp .env.example .env     # preencha DATABASE_URL, DIRECT_URL e AUTH_SECRET
 npx auth secret          # gera o AUTH_SECRET
 npm run db:migrate       # cria as tabelas
 npm run dev              # http://localhost:3000
 ```
 
+Localmente, `DIRECT_URL` recebe a mesma URL de `DATABASE_URL`. As duas só diferem em produção, onde `DATABASE_URL` usa a conexão com pool do provedor e `DIRECT_URL` a conexão direta, exigida pelas migrações.
+
 O login com Google é opcional: sem `AUTH_GOOGLE_ID`/`AUTH_GOOGLE_SECRET` no `.env`, o botão simplesmente não aparece e o login por e-mail/senha continua funcionando.
 
-Scripts disponíveis: `dev`, `build`, `start`, `lint`, `typecheck`, `db:migrate`, `db:generate`, `db:studio`.
+Scripts disponíveis: `dev`, `build`, `start`, `lint`, `typecheck`, `db:migrate`, `db:deploy`, `db:generate`, `db:studio`.
+
+## Deploy
+
+O deploy é contínuo na Vercel: cada push na `main` gera uma nova versão.
+
+1. Crie um PostgreSQL gerenciado (Neon, Supabase ou Railway) e copie as duas strings de conexão — a com pool e a direta.
+2. Importe o repositório na Vercel. O framework é detectado automaticamente.
+3. Configure as variáveis de ambiente no projeto da Vercel: `DATABASE_URL`, `DIRECT_URL` e `AUTH_SECRET` (gere um novo, diferente do local).
+4. Para o login com Google em produção, cadastre `https://<seu-dominio>/api/auth/callback/google` como URI de redirecionamento no Google Cloud Console e configure `AUTH_GOOGLE_ID` e `AUTH_GOOGLE_SECRET`.
+
+As migrações rodam sozinhas: o script de `build` executa `prisma migrate deploy` antes de compilar, então o schema do banco acompanha cada deploy.
+
+### Trocando de banco
+
+O banco não está preso ao projeto. Para migrar para outro PostgreSQL, basta apontar `DATABASE_URL`/`DIRECT_URL` para a nova instância e rodar `npm run db:deploy` — as migrações versionadas em `prisma/migrations/` recriam o schema inteiro. Os dados não são transferidos por esse caminho; para isso, use `pg_dump`/`pg_restore`.
 
 ## Estrutura de pastas
 
