@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Project Model Canvas — MeuSalão</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #e8e8e8;
+      padding: 24px;
+      color: #1a1a1a;
+    }
+
+    .canvas-wrapper {
+      max-width: 1600px;
+      margin: 0 auto;
+      background: #d4d4d4;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.15);
+    }
+
+    .canvas-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      padding: 16px 20px 8px;
+    }
+
+    .canvas-header-left {
+      display: flex;
+      gap: 40px;
+      align-items: baseline;
+    }
+
+    .header-gp {
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: 1px;
+      color: #333;
+    }
+
+    .header-pitch {
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: 1px;
+      color: #333;
+    }
+
+    .header-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #555;
+    }
+
+    .canvas-grid {
+      display: grid;
+      grid-template-columns: 1fr 1.15fr 1fr 1fr 1fr;
+      grid-template-rows: 200px 160px 230px 230px 160px;
+      gap: 6px;
+      padding: 6px;
+    }
+
+    .cell {
+      background: #fff;
+      border-radius: 4px;
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      border: 1px solid #ccc;
+    }
+
+    .cell-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+      flex-shrink: 0;
+    }
+
+    .cell-icon {
+      width: 28px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 20px;
+    }
+
+    .cell-title {
+      font-size: 13px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      line-height: 1.2;
+      color: #1a1a1a;
+    }
+
+    .cell-subtitle {
+      font-size: 11px;
+      font-weight: 600;
+      color: #666;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+
+    .cell-content {
+      font-size: 13px;
+      line-height: 1.6;
+      color: #333;
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    .cell-content ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    .cell-content li {
+      position: relative;
+      padding-left: 12px;
+      margin-bottom: 4px;
+    }
+
+    .cell-content li::before {
+      content: "•";
+      position: absolute;
+      left: 0;
+      color: #888;
+      font-weight: bold;
+    }
+
+    /* Grid positions */
+    .justificativas {
+      grid-column: 1;
+      grid-row: 1;
+    }
+
+    .produto {
+      grid-column: 2;
+      grid-row: 1;
+    }
+
+    .stakeholders {
+      grid-column: 3;
+      grid-row: 1 / 3;
+    }
+
+    .premissas {
+      grid-column: 4;
+      grid-row: 1 / 3;
+    }
+
+    .riscos {
+      grid-column: 5;
+      grid-row: 1 / 3;
+    }
+
+    .obj-smart {
+      grid-column: 1;
+      grid-row: 2 / 3;
+    }
+
+    .requisitos {
+      grid-column: 2;
+      grid-row: 2 / 5;
+    }
+
+    .equipe {
+      grid-column: 3;
+      grid-row: 3 / 5;
+    }
+
+    .entregas {
+      grid-column: 4;
+      grid-row: 3 / 5;
+    }
+
+    .timeline {
+      grid-column: 5;
+      grid-row: 3 / 5;
+    }
+
+    .beneficios {
+      grid-column: 1;
+      grid-row: 3 / 6;
+    }
+
+    .restricoes {
+      grid-column: 2 / 5;
+      grid-row: 5;
+    }
+
+    .custos {
+      grid-column: 5;
+      grid-row: 5;
+    }
+
+    /* GP column subtle background */
+    .justificativas,
+    .obj-smart,
+    .beneficios {
+      background: #fafafa;
+    }
+
+    .canvas-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 20px 12px;
+    }
+
+    .footer-author {
+      font-size: 10px;
+      color: #777;
+      font-style: italic;
+    }
+
+    .footer-title {
+      font-size: 16px;
+      font-weight: 800;
+      color: #333;
+      letter-spacing: 0.5px;
+    }
+
+    /* Scrollbar styling */
+    .cell-content::-webkit-scrollbar {
+      width: 3px;
+    }
+
+    .cell-content::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .cell-content::-webkit-scrollbar-thumb {
+      background: #ccc;
+      border-radius: 3px;
+    }
+
+    /* Print styles */
+    @media print {
+      body {
+        padding: 0;
+        background: white;
+      }
+      .canvas-wrapper {
+        box-shadow: none;
+        border: 1px solid #999;
+      }
+      .canvas-grid {
+        grid-template-rows: 160px 120px 190px 190px 110px;
+      }
+      .cell-content {
+        overflow: visible;
+      }
+    }
+
+    @media (max-width: 900px) {
+      .canvas-grid {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto;
+      }
+      .cell {
+        grid-column: 1 !important;
+        grid-row: auto !important;
+        min-height: 120px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div class="canvas-wrapper">
+
+  <div class="canvas-header">
+    <div class="canvas-header-left">
+      <span class="header-gp">GP</span>
+      <span class="header-pitch">PITCH</span>
+    </div>
+    <span class="header-title">MeuSalão — Marketplace de Serviços de Beleza</span>
+  </div>
+
+  <div class="canvas-grid">
+
+    <!-- JUSTIFICATIVAS -->
+    <div class="cell justificativas">
+      <div class="cell-header">
+        <div class="cell-icon">💬</div>
+        <div>
+          <div class="cell-title">Justificativas</div>
+          <div class="cell-subtitle">Passado</div>
+        </div>
+      </div>
+      <div class="cell-content">
+        <ul>
+          <li>80%+ dos salões no Brasil usam agendamento manual (WhatsApp e caderno)</li>
+          <li>Clientes perdem tempo com ligações e tentativa/erro para encontrar salão confiável</li>
+          <li>Não existe plataforma nacional dominante de descoberta + agendamento de beleza</li>
+          <li>Salões sofrem com conflitos de agenda, no-shows e falta de presença digital</li>
+          <li>Salões maiores investem em anúncios sem retorno mensurável</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- PRODUTO -->
+    <div class="cell produto">
+      <div class="cell-header">
+        <div class="cell-icon">📦</div>
+        <div>
+          <div class="cell-title">Produto</div>
+        </div>
+      </div>
+      <div class="cell-content">
+        <ul>
+          <li>Marketplace mobile-first de serviços de beleza</li>
+          <li>Descoberta local de salões por geolocalização</li>
+          <li>Agendamento online direto entre cliente e salão</li>
+          <li>Perfis de salão com serviços, preços, avaliações e fotos</li>
+          <li>Painel de gestão de agenda para salões</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- STAKEHOLDERS EXTERNOS -->
+    <div class="cell stakeholders">
+      <div class="cell-header">
+        <div class="cell-icon">👥</div>
+        <div>
+          <div class="cell-title">Stakeholders Externos</div>
+          <div class="cell-subtitle">& Fatores Externos</div>
+        </div>
+      </div>
+      <div class="cell-content">
+        <ul>
+          <li>Clientes de serviços de beleza (mulheres, homens, adolescentes)</li>
+          <li>Donos e profissionais de salões de beleza</li>
+          <li>App Stores (Google Play, Apple App Store)</li>
+          <li>Provedores de pagamento (Pix, cartões)</li>
+          <li>Associações do setor de beleza</li>
+          <li>Concorrentes (Booksy, Trinks, etc.)</li>
+          <li>Regulamentação LGPD (proteção de dados)</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- PREMISSAS -->
+    <div class="cell premissas">
+      <div class="cell-header">
+        <div class="cell-icon">☁️</div>
+        <div>
+          <div class="cell-title">Premissas</div>
+        </div>
+      </div>
+      <div class="cell-content">
+        <ul>
+          <li>Salões aderirão pela promessa de visibilidade e captação de novos clientes</li>
+          <li>Clientes urbanos preferem agendamento digital vs. WhatsApp/telefone</li>
+          <li>Importação CSV remove barreira de migração de dados de sistemas legados</li>
+          <li>Mercado de beleza brasileiro é grande e fragmentado o suficiente para sustentar a plataforma</li>
+          <li>Salões estarão dispostos a pagar por plano premium após validação do MVP</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- RISCOS -->
+    <div class="cell riscos">
+      <div class="cell-header">
+        <div class="cell-icon">⚠️</div>
+        <div>
+          <div class="cell-title">Riscos</div>
+        </div>
+      </div>
+      <div class="cell-content">
+        <ul>
+          <li>Baixa adesão de salões no período de piloto</li>
+          <li>Clientes não confiarem nas avaliações da plataforma</li>
+          <li>Entrada de concorrentes com mais recursos e investimento</li>
+          <li>Resistência de donos de salão à adoção tecnológica</li>
+          <li>Dificuldade de reter salões sem monetização imediata</li>
+          <li>Dependência de geolocalização pode excluir áreas com baixa cobertura</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- OBJ SMART -->
+    <div class="cell obj-smart">
+      <div class="cell-header">
+        <div class="cell-icon">🎯</div>
+        <div>
+          <div class="cell-title">Obj SMART</div>
+        </div>
+      </div>
+      <div class="cell-content">
+        <ul>
+          <li>≥50 salões ativos no piloto em 6 meses</li>
+          <li>≥1.000 acessos únicos/mês</li>
+          <li>≥200 agendamentos nos primeiros 3 meses</li>
+          <li>≥30% taxa de retorno de clientes em 7 dias</li>
+          <li>NPS ≥70% de satisfação inicial</li>
+          <li>≥30% redução de conflitos de agenda</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- REQUISITOS -->
+    <div class="cell requisitos">
+      <div class="cell-header">
+        <div class="cell-icon">📋</div>
+        <div>
+          <div class="cell-title">Requisitos</div>
+        </div>
+      </div>
+      <div class="cell-content">
+        <ul>
+          <li>App mobile-first responsivo</li>
+          <li>Sistema de geolocalização e busca por proximidade</li>
+          <li>Cadastro guiado para salões e clientes</li>
+          <li>Catálogo de serviços com preços configuráveis</li>
+          <li>Calendário de disponibilidade em tempo real</li>
+          <li>Notificações push, email e SMS</li>
+          <li>Sistema de avaliações e reviews</li>
+          <li>Importação de dados via CSV</li>
+          <li>Filtros por tipo de serviço, distância, avaliação e disponibilidade</li>
+          <li>Confirmação e lembretes automáticos de agendamento</li>
+          <li>Painel de gestão de agenda para salões</li>
+          <li>Canal de suporte e FAQ</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- EQUIPE -->
+    <div class="cell equipe">
+      <div class="cell-header">
+        <div class="cell-icon">👨‍💻</div>
+        <div>
+          <div class="cell-title">Equipe</div>
+        </div>
+      </div>
+      <div class="cell-content">
+        <ul>
+          <li>Equipe acadêmica — Projeto Aplicado Unifor 2026.1</li>
+          <li>Desenvolvedores Full-Stack</li>
+          <li>Designer UX/UI</li>
+          <li>Product Owner</li>
+          <li>Scrum Master</li>
+          <li>QA / Tester</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- GRUPO DE ENTREGAS -->
+    <div class="cell entregas">
+      <div class="cell-header">
+        <div class="cell-icon">📦</div>
+        <div>
+          <div class="cell-title">Grupo de Entregas</div>
+        </div>
+      </div>
+      <div class="cell-content">
+        <ul>
+          <li><strong>E1:</strong> Cadastro e onboarding (salões e clientes)</li>
+          <li><strong>E2:</strong> Perfis de salão (catálogo, preços, fotos, avaliações)</li>
+          <li><strong>E3:</strong> Busca e descoberta (geolocalização, filtros)</li>
+          <li><strong>E4:</strong> Agendamento online (calendário, confirmação)</li>
+          <li><strong>E5:</strong> Notificações e lembretes automáticos</li>
+          <li><strong>E6:</strong> Painel de gestão de agenda (salões)</li>
+          <li><strong>E7:</strong> Importação de dados (CSV)</li>
+          <li><strong>E8:</strong> Sistema de avaliações e reviews</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- LINHA DO TEMPO -->
+    <div class="cell timeline">
+      <div class="cell-header">
+        <div class="cell-icon">⏳</div>
+        <div>
+          <div class="cell-title">Linha do Tempo</div>
+        </div>
+      </div>
+      <div class="cell-content">
+        <ul>
+          <li><strong>Fase 1</strong> (0-6m): Validação e MVP funcional</li>
+          <li><strong>Fase 2</strong> (6-12m): Engajamento e crescimento local</li>
+          <li><strong>Fase 3</strong> (12-18m): Monetização e escala regional</li>
+          <li><strong>Fase 4</strong> (18-30m): Ecossistema integrado</li>
+          <li><strong>Fase 5</strong> (30-48m): Expansão nacional</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- BENEFÍCIOS -->
+    <div class="cell beneficios">
+      <div class="cell-header">
+        <div class="cell-icon">📈</div>
+        <div>
+          <div class="cell-title">Benefícios</div>
+          <div class="cell-subtitle">Futuro</div>
+        </div>
+      </div>
+      <div class="cell-content">
+        <ul>
+          <li>Redução de no-shows em ≥50% nos salões ativos</li>
+          <li>Aumento orgânico da base de clientes para salões</li>
+          <li>Conveniência digital completa para clientes</li>
+          <li>Centralização gradual da gestão do salão em uma plataforma</li>
+          <li>Receita sustentável via assinaturas premium e comissões</li>
+          <li>Efeito de rede: mais salões → mais clientes → mais valor</li>
+          <li>Eliminação de sistemas legados paralelos pelos salões</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- RESTRIÇÕES -->
+    <div class="cell restricoes">
+      <div class="cell-header">
+        <div class="cell-icon">🚫</div>
+        <div>
+          <div class="cell-title">Restrições</div>
+        </div>
+      </div>
+      <div class="cell-content">
+        <ul>
+          <li>Projeto acadêmico com prazo de semestre letivo</li>
+          <li>Orçamento limitado — sem investimento externo</li>
+          <li>MVP não inclui ERP completo (financeiro, estoque, folha de pagamento)</li>
+          <li>Foco exclusivo no segmento de beleza no MVP</li>
+          <li>Não realiza entrega de produtos físicos</li>
+          <li>Não garante qualidade do serviço — apenas expõe avaliações</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- CUSTOS -->
+    <div class="cell custos">
+      <div class="cell-header">
+        <div class="cell-icon">💲</div>
+        <div>
+          <div class="cell-title">Custos</div>
+        </div>
+      </div>
+      <div class="cell-content">
+        <ul>
+          <li>Infraestrutura cloud (hospedagem, servidores)</li>
+          <li>Horas de desenvolvimento da equipe</li>
+          <li>Domínio e certificados SSL</li>
+          <li>APIs de geolocalização e mapas</li>
+          <li>Gateway de pagamento (taxas)</li>
+          <li>Marketing e aquisição inicial</li>
+        </ul>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="canvas-footer">
+    <span class="footer-author">Baseado no modelo de José Finocchio Junior</span>
+    <span class="footer-title">Project Model Canvas</span>
+  </div>
+
+</div>
+
+</body>
+</html>
