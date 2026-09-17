@@ -2,6 +2,8 @@
 
 Marketplace digital de serviços de beleza — descoberta local e agendamento direto.
 
+**Aplicação no ar:** [meusalao-fs.vercel.app](https://meusalao-fs.vercel.app)
+
 ## Sobre o projeto
 
 O MeuSalão é uma aplicação web full-stack, mobile-first, que conecta clientes a salões de beleza próximos, centralizando em um único lugar a oferta de serviços, preços, avaliações e agendamento.
@@ -97,12 +99,14 @@ Scripts disponíveis: `dev`, `build`, `start`, `lint`, `typecheck`, `db:migrate`
 
 ## Deploy
 
+A aplicação está publicada em **https://meusalao-fs.vercel.app** (visitante cai direto no login, por conta da proteção de rotas no middleware).
+
 O deploy é contínuo na Vercel: cada push na `main` gera uma nova versão.
 
 1. Crie um PostgreSQL gerenciado (Neon, Supabase ou Railway) e copie as duas strings de conexão — a com pool e a direta.
 2. Importe o repositório na Vercel. O framework é detectado automaticamente.
 3. Configure as variáveis de ambiente no projeto da Vercel: `DATABASE_URL`, `DIRECT_URL` e `AUTH_SECRET` (gere um novo, diferente do local).
-4. Para o login com Google em produção, cadastre `https://<seu-dominio>/api/auth/callback/google` como URI de redirecionamento no Google Cloud Console e configure `AUTH_GOOGLE_ID` e `AUTH_GOOGLE_SECRET`.
+4. Para o login com Google em produção, cadastre a URI de redirecionamento no Google Cloud Console — neste projeto, `https://meusalao-fs.vercel.app/api/auth/callback/google` — e configure `AUTH_GOOGLE_ID` e `AUTH_GOOGLE_SECRET`.
 
 As migrações rodam sozinhas: o script de `build` executa `prisma migrate deploy` antes de compilar, então o schema do banco acompanha cada deploy.
 
