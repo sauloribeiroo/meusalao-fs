@@ -95,7 +95,9 @@ Localmente, `DIRECT_URL` recebe a mesma URL de `DATABASE_URL`. As duas só difer
 
 O login com Google é opcional: sem `AUTH_GOOGLE_ID`/`AUTH_GOOGLE_SECRET` no `.env`, o botão simplesmente não aparece e o login por e-mail/senha continua funcionando.
 
-Scripts disponíveis: `dev`, `build`, `start`, `lint`, `typecheck`, `db:migrate`, `db:deploy`, `db:generate`, `db:studio`.
+Para ter dados com que trabalhar (salão, serviços e horários de demonstração), rode `npm run db:seed` — ele imprime as contas de teste criadas.
+
+Scripts disponíveis: `dev`, `build`, `start`, `lint`, `typecheck`, `db:migrate`, `db:deploy`, `db:generate`, `db:seed`, `db:studio`.
 
 ## Deploy
 
@@ -131,9 +133,9 @@ src/
   middleware.ts               proteção de rotas antes da renderização
 ```
 
-## Status — Sprint 1
+## Status
 
-Entregue nesta sprint:
+### Sprint 1 — autenticação
 
 - Cadastro por e-mail/senha, com validação (Zod) e senha guardada como hash (bcrypt).
 - Login por e-mail/senha e, quando configurado, login social com Google.
@@ -141,7 +143,21 @@ Entregue nesta sprint:
 - Proteção de rotas no middleware: visitante em rota privada vai para `/login`; usuário logado em `/login` ou `/cadastro` vai para `/inicio`.
 - Tela inicial (`/inicio`) com saudação, cabeçalho com logout, categorias de serviço e os espaços de busca e de salões próximos.
 
-A busca de salões, o mapa, os filtros e o agendamento entram nas sprints seguintes — por isso o campo de busca e a lista de salões aparecem desabilitados na tela inicial.
+### Sprint 2 — agendamento (backend)
+
+Modelo de dados completo (`Salao`, `Servico`, `HorarioFuncionamento`, `Agendamento`, `Avaliacao`) e a API do fluxo de agendamento:
+
+- **Serviços do salão** (RF20) — cadastro, edição e remoção, com preço opcional ("Consultar preço", RGN06).
+- **Horários de funcionamento** (RF22) — a semana inteira por dia, com abertura, fechamento e dia desativado.
+- **Disponibilidade** (RF15) — grade de horários de um dia para um serviço, marcando os ocupados.
+- **Agendamento** (RF16) — criação validada contra o funcionamento do salão (RGN01) e contra horário ocupado (RGN02), esta reforçada por índice único parcial no banco.
+- **Gestão pelo salão** (RF25) — confirmar, recusar e concluir agendamentos, restrito ao dono (RGN07).
+
+O contrato completo dos endpoints está em [`docs/contrato-api.md`](docs/contrato-api.md).
+
+Como o cadastro de salão (RF03) ainda não existe, use `npm run db:seed` para criar um salão de demonstração com serviços, horários e contas de teste.
+
+As telas dessas funcionalidades, a busca, o mapa e os filtros entram nas sprints seguintes.
 
 ### Por que Next.js full-stack em vez de backend separado?
 

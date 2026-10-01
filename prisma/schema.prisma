@@ -17,6 +17,26 @@ enum Papel {
   ADMIN
 }
 
+// PENDENTE não está no PRD (seção 5.5), mas o RF25 exige que o salão "confirme
+// ou recuse os agendamentos pendentes" — sem esse estado o requisito não existe.
+// Recusa do salão e cancelamento do cliente caem os dois em CANCELADO.
+enum StatusAgendamento {
+  PENDENTE
+  CONFIRMADO
+  CANCELADO
+  CONCLUIDO
+}
+
+enum DiaSemana {
+  DOM
+  SEG
+  TER
+  QUA
+  QUI
+  SEX
+  SAB
+}
+
 model Usuario {
   id        String   @id @default(cuid())
   nome      String
@@ -28,9 +48,111 @@ model Usuario {
   imagem    String?
   criadoEm  DateTime @default(now())
 
-  contas Conta[]
+  contas       Conta[]
+  saloes       Salao[]       @relation("DonoSaloes")
+  agendamentos Agendamento[]
+  avaliacoes   Avaliacao[]
 
   @@map("usuarios")
+}
+
+model Salao {
+  id        String   @id @default(cuid())
+  donoId    String
+  nome      String
+  descricao String?
+  endereco  String
+  telefone  String?
+  latitude  Float?
+  longitude Float?
+  tipo      String?
+  // RGN05: só aparece na busca e no mapa depois de publicado.
+  publicado Boolean  @default(false)
+  criadoEm  DateTime @default(now())
+
+  dono         Usuario                @relation("DonoSaloes", fields: [donoId], references: [id], onDelete: Cascade)
+  servicos     Servico[]
+  horarios     HorarioFuncionamento[]
+  agendamentos Agendamento[]
+  avaliacoes   Avaliacao[]
+
+  @@index([donoId])
+  // RNF03: a busca filtra por publicado antes de qualquer outra coisa.
+  @@index([publicado])
+  @@map("saloes")
+}
+
+model Servico {
+  id         String   @id @default(cuid())
+  salaoId    String
+  nome       String
+  // Opcional: sem preço, a vitrine exibe "Consultar preço" (RGN06).
+  preco      Decimal? @db.Decimal(10, 2)
+  duracaoMin Int
+  criadoEm   DateTime @default(now())
+
+  salao        Salao         @relation(fields: [salaoId], references: [id], onDelete: Cascade)
+  agendamentos Agendamento[]
+
+  @@index([salaoId])
+  @@map("servicos")
+}
+
+model HorarioFuncionamento {
+  id             String    @id @default(cuid())
+  salaoId        String
+  diaSemana      DiaSemana
+  // "HH:MM" no fuso do salão. Guardar como texto evita arrastar uma data
+  // fictícia só para representar hora do dia.
+  horaAbertura   String
+  horaFechamento String
+  ativo          Boolean   @default(true)
+
+  salao Salao @relation(fields: [salaoId], references: [id], onDelete: Cascade)
+
+  // Um registro por dia da semana em cada salão.
+  @@unique([salaoId, diaSemana])
+  @@map("horarios_funcionamento")
+}
+
+model Agendamento {
+  id        String            @id @default(cuid())
+  clienteId String
+  salaoId   String
+  servicoId String
+  dataHora  DateTime
+  status    StatusAgendamento @default(PENDENTE)
+  criadoEm  DateTime          @default(now())
+
+  cliente   Usuario    @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  salao     Salao      @relation(fields: [salaoId], references: [id], onDelete: Cascade)
+  servico   Servico    @relation(fields: [servicoId], references: [id])
+  avaliacao Avaliacao?
+
+  // RGN02 é garantida por um índice único PARCIAL, criado à mão na migração:
+  // único em (salaoId, dataHora) enquanto o status não for CANCELADO. Um
+  // @@unique comum, como está no PRD, deixaria o horário bloqueado para sempre
+  // depois de um cancelamento.
+  @@index([clienteId, dataHora])
+  @@index([salaoId, dataHora])
+  @@map("agendamentos")
+}
+
+model Avaliacao {
+  id            String   @id @default(cuid())
+  clienteId     String
+  salaoId       String
+  agendamentoId String   @unique
+  nota          Int
+  comentario    String?
+  criadoEm      DateTime @default(now())
+
+  cliente     Usuario     @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  salao       Salao       @relation(fields: [salaoId], references: [id], onDelete: Cascade)
+  agendamento Agendamento @relation(fields: [agendamentoId], references: [id], onDelete: Cascade)
+
+  @@index([salaoId])
+  @@map("avaliacoes")
 }
 
 // Vínculo com um provedor externo (ex.: Google), usado no login social
