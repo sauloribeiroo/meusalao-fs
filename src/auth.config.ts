@@ -1,7 +1,7 @@
 import type { NextAuthConfig } from "next-auth";
 
 /** Rotas que exigem sessão. O restante (login, cadastro) é público. */
-const ROTAS_PRIVADAS = ["/inicio"];
+const ROTAS_PRIVADAS = ["/inicio", "/salao"];
 
 /**
  * Parte da configuração que também roda no middleware (Edge). Não pode

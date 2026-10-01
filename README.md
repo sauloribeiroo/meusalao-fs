@@ -155,9 +155,16 @@ Modelo de dados completo (`Salao`, `Servico`, `HorarioFuncionamento`, `Agendamen
 
 O contrato completo dos endpoints está em [`docs/contrato-api.md`](docs/contrato-api.md).
 
+### Sprint 2 — agendamento (telas)
+
+- **Serviços do salão** (`/salao/meu/servicos`) — cadastro, edição e exclusão, com preço opcional.
+- **Horários** (`/salao/meu/horarios`) — a semana por dia, com replicar segunda para os dias úteis.
+- **Agendamento** (`/salao/[salaoId]/agendar`) — escolha do serviço e calendário de 21 dias, com os horários ocupados visíveis e desabilitados.
+- **Confirmação** (`.../confirmar` e `.../sucesso`) — revisão dos dados, confirmação e resumo.
+
 Como o cadastro de salão (RF03) ainda não existe, use `npm run db:seed` para criar um salão de demonstração com serviços, horários e contas de teste.
 
-As telas dessas funcionalidades, a busca, o mapa e os filtros entram nas sprints seguintes.
+A busca por nome e serviço, os filtros, o mapa e a área administrativa entram nas sprints seguintes — a tela inicial lista os salões publicados apenas para dar acesso ao agendamento.
 
 ### Por que Next.js full-stack em vez de backend separado?
 
