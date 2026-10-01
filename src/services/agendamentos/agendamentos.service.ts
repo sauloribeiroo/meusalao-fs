@@ -6,7 +6,12 @@ import { diaSemanaDe, horaDeMinutos, localDe, minutosDaHora } from "@/services/h
 import { exigirSalao } from "@/services/saloes/saloes.service";
 import { exigirServicoDoSalao } from "@/services/servicos/servicos.service";
 import { acaoDoSalaoSchema, novoAgendamentoSchema, type AcaoDoSalao } from "@/services/agendamentos/schemas";
-import { STATUS_QUE_OCUPAM } from "@/services/agendamentos/disponibilidade.service";
+import {
+  DURACAO_MAXIMA_MIN,
+  STATUS_QUE_OCUPAM,
+  seSobrepoe,
+  type Intervalo,
+} from "@/services/agendamentos/disponibilidade.service";
 
 export type AgendamentoPublico = {
   id: string;
@@ -14,6 +19,12 @@ export type AgendamentoPublico = {
   /** Data e hora já no fuso do salão, para a tela não refazer a conversão. */
   data: string;
   hora: string;
+  /**
+   * Duração contratada no momento do agendamento. Pode diferir da duração
+   * atual do serviço, se o salão a tiver mudado depois — para exibir o
+   * atendimento na agenda, é esta que vale.
+   */
+  duracaoMin: number;
   status: StatusAgendamento;
   criadoEm: string;
   salao: { id: string; nome: string; endereco: string; telefone: string | null };
@@ -37,6 +48,7 @@ function paraPublico(agendamento: AgendamentoDoBanco): AgendamentoPublico {
     dataHora: agendamento.dataHora.toISOString(),
     data,
     hora,
+    duracaoMin: agendamento.duracaoMin,
     status: agendamento.status,
     criadoEm: agendamento.criadoEm.toISOString(),
     // Campo a campo de propósito: há consulta que traz `donoId` junto no salão
@@ -89,26 +101,63 @@ export async function criarAgendamento(clienteId: string, dados: unknown): Promi
 
   await exigirHorarioDentroDoFuncionamento(salaoId, instante, servico.duracaoMin);
 
-  const ocupado = await prisma.agendamento.findFirst({
-    where: { salaoId, dataHora: instante, status: { in: [...STATUS_QUE_OCUPAM] } },
-    select: { id: true },
-  });
-  if (ocupado) throw new ErroDeConflito("Este horário acabou de ser ocupado. Escolha outro.");
+  const fim = new Date(instante.getTime() + servico.duracaoMin * 60_000);
+  const ocupados = await intervalosDoSalaoEntre(salaoId, instante, fim);
+  if (seSobrepoe({ inicio: instante, fim }, ocupados)) {
+    throw new ErroDeConflito("Este horário acabou de ser ocupado. Escolha outro.");
+  }
 
   try {
     const agendamento = await prisma.agendamento.create({
-      data: { clienteId, salaoId, servicoId, dataHora: instante },
+      data: { clienteId, salaoId, servicoId, dataHora: instante, duracaoMin: servico.duracaoMin },
       include: INCLUSAO,
     });
 
     return paraPublico(agendamento);
   } catch (erro) {
-    // P2002 = violação de índice único: alguém agendou no mesmo instante.
-    if (erro instanceof Prisma.PrismaClientKnownRequestError && erro.code === "P2002") {
+    if (ehConflitoDeAgenda(erro)) {
       throw new ErroDeConflito("Este horário acabou de ser ocupado. Escolha outro.");
     }
     throw erro;
   }
+}
+
+/**
+ * Agendamentos do salão que podem cruzar a janela pedida. A busca recua a
+ * duração máxima de um serviço porque um atendimento que começou antes da
+ * janela ainda pode estar em curso dentro dela.
+ */
+async function intervalosDoSalaoEntre(salaoId: string, inicio: Date, fim: Date): Promise<Intervalo[]> {
+  const agendamentos = await prisma.agendamento.findMany({
+    where: {
+      salaoId,
+      status: { in: [...STATUS_QUE_OCUPAM] },
+      dataHora: { gte: new Date(inicio.getTime() - DURACAO_MAXIMA_MIN * 60_000), lt: fim },
+    },
+    select: { dataHora: true, duracaoMin: true },
+  });
+
+  return agendamentos.map((agendamento) => ({
+    inicio: agendamento.dataHora,
+    fim: new Date(agendamento.dataHora.getTime() + agendamento.duracaoMin * 60_000),
+  }));
+}
+
+/**
+ * Conflito de agenda detectado pelo banco, e não pela checagem anterior —
+ * acontece quando outra requisição grava entre a consulta e o insert.
+ *
+ * `23P01` é a violação da restrição EXCLUDE de sobreposição. O Prisma não tem
+ * código próprio para ela, então chega como erro cru do Postgres; `P2002`
+ * cobre o índice único, caso algum volte a existir no futuro.
+ */
+function ehConflitoDeAgenda(erro: unknown): boolean {
+  if (erro instanceof Prisma.PrismaClientKnownRequestError) {
+    if (erro.code === "P2002") return true;
+    if (erro.code === "P2010" && JSON.stringify(erro.meta ?? {}).includes("23P01")) return true;
+  }
+
+  return erro instanceof Error && erro.message.includes("agendamentos_sem_sobreposicao");
 }
 
 /** RGN01 — o horário precisa existir na grade do dia e caber antes do fechamento. */

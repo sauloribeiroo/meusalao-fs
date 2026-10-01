@@ -151,6 +151,10 @@ Valida fechamento depois da abertura e dia repetido (422).
   refaça a chamada.
 - Horários ocupados vêm com `livre: false` em vez de sumirem: o RF15 pede que o
   ocupado apareça. Horário que já passou também vem `livre: false`.
+- **A ocupação considera a duração inteira do atendimento, não só o início.**
+  Um corte de 60 min às 10:00 deixa 10:30 indisponível para um serviço de 30
+  min, porque o salão só vaga às 11:00. Encostar não conflita: um serviço que
+  termina 10:00 convive com outro que começa 10:00.
 - **Use o `dataHora` do slot no POST de agendamento**, sem remontar a data no
   cliente. Ele já está no fuso certo.
 
@@ -173,6 +177,7 @@ Resposta:
     "dataHora": "2026-10-05T12:00:00.000Z",
     "data": "2026-10-05",
     "hora": "09:00",
+    "duracaoMin": 30,
     "status": "PENDENTE",
     "criadoEm": "2026-10-01T18:02:00.000Z",
     "salao":   { "id": "c...", "nome": "Salão da Márcia", "endereco": "...", "telefone": "..." },
@@ -183,6 +188,8 @@ Resposta:
 ```
 
 `data` e `hora` já vêm convertidos para o fuso do salão — não refaça a conversão.
+`duracaoMin` é a duração contratada no momento do agendamento; se o salão mudar a
+duração do serviço depois, os agendamentos antigos mantêm a sua.
 
 Conflitos possíveis (409), com mensagem pronta:
 
@@ -243,8 +250,12 @@ confirmado.
 > os dois em `CANCELADO`.
 
 **Só `CANCELADO` libera o horário.** `PENDENTE`, `CONFIRMADO` e `CONCLUIDO`
-ocupam a agenda — a garantia final é um índice único parcial no Postgres, então
-duas pessoas não conseguem pegar o mesmo horário nem em requisições simultâneas.
+ocupam a agenda.
+
+A garantia final é uma restrição `EXCLUDE` no Postgres sobre o intervalo
+`dataHora → dataHora + duracaoMin`, por salão: nem em requisições simultâneas
+duas pessoas conseguem agendar atendimentos que se cruzem. Verificado com 10
+requisições concorrentes no mesmo horário — um 201 e nove 409.
 
 ## Fuso horário
 

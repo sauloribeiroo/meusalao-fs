@@ -121,6 +121,11 @@ model Agendamento {
   salaoId   String
   servicoId String
   dataHora  DateTime
+  // Copiada do serviço no momento do agendamento, por dois motivos: o salão
+  // pode mudar a duração do serviço depois, e isso não deve reescrever o
+  // passado; e a restrição de sobreposição no banco precisa do fim do
+  // atendimento na própria linha.
+  duracaoMin Int
   status    StatusAgendamento @default(PENDENTE)
   criadoEm  DateTime          @default(now())
 
@@ -129,10 +134,12 @@ model Agendamento {
   servico   Servico    @relation(fields: [servicoId], references: [id])
   avaliacao Avaliacao?
 
-  // RGN02 é garantida por um índice único PARCIAL, criado à mão na migração:
-  // único em (salaoId, dataHora) enquanto o status não for CANCELADO. Um
-  // @@unique comum, como está no PRD, deixaria o horário bloqueado para sempre
-  // depois de um cancelamento.
+  // RGN02 é garantida por uma restrição EXCLUDE criada à mão na migração: no
+  // mesmo salão, dois atendimentos não podem ter intervalos que se cruzem
+  // (dataHora → dataHora + duracaoMin), ignorando os cancelados. Nem o
+  // @@unique do PRD nem um índice único em (salaoId, dataHora) dariam conta:
+  // os dois só comparam o INÍCIO, então um corte de 60 min às 10:00 não
+  // impediria outro de 30 min às 10:30, com o salão ocupado até as 11:00.
   @@index([clienteId, dataHora])
   @@index([salaoId, dataHora])
   @@map("agendamentos")
