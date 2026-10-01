@@ -1,19 +1,12 @@
 import { prisma } from "@/lib/prisma";
 import { ErroDeValidacao } from "@/services/erros";
 import { janelaDoDia } from "@/services/horarios/horarios.service";
-import {
-  dataValida,
-  diaSemanaDe,
-  horaDeMinutos,
-  instanteDe,
-  localDe,
-  minutosDaHora,
-} from "@/services/horarios/tempo";
+import { dataValida, diaSemanaDe, horaDeMinutos, instanteDe, minutosDaHora } from "@/services/horarios/tempo";
 import { exigirSalao } from "@/services/saloes/saloes.service";
 import { exigirServicoDoSalao } from "@/services/servicos/servicos.service";
 
 /**
- * Status que ocupam a agenda — os mesmos do índice único parcial (RGN02).
+ * Status que ocupam a agenda — os mesmos da restrição EXCLUDE no banco (RGN02).
  * Só o cancelamento devolve o horário: um atendimento concluído aconteceu de
  * fato naquele horário e não pode ser revendido.
  */
@@ -64,7 +57,7 @@ export async function consultarDisponibilidade(params: {
     return { salaoId, servicoId, data, funcionamento: null, duracaoMin: servico.duracaoMin, slots: [] };
   }
 
-  const ocupados = await horariosOcupados(salaoId, data);
+  const ocupados = await intervalosOcupados(salaoId, data);
   const agora = Date.now();
 
   const abertura = minutosDaHora(janela.horaAbertura);
@@ -73,13 +66,16 @@ export async function consultarDisponibilidade(params: {
 
   for (let minuto = abertura; minuto + servico.duracaoMin <= fechamento; minuto += servico.duracaoMin) {
     const hora = horaDeMinutos(minuto);
-    const instante = instanteDe(data, hora);
+    const inicio = instanteDe(data, hora);
+    const fim = new Date(inicio.getTime() + servico.duracaoMin * 60_000);
 
     slots.push({
       hora,
-      dataHora: instante.toISOString(),
-      // Horário no passado não é oferecido, mesmo estando livre na agenda.
-      livre: !ocupados.has(hora) && instante.getTime() > agora,
+      dataHora: inicio.toISOString(),
+      livre:
+        !seSobrepoe({ inicio, fim }, ocupados) &&
+        // Horário no passado não é oferecido, mesmo estando livre na agenda.
+        inicio.getTime() > agora,
     });
   }
 
@@ -93,20 +89,47 @@ export async function consultarDisponibilidade(params: {
   };
 }
 
-/** Horas ("HH:MM") já tomadas no salão naquele dia. */
-async function horariosOcupados(salaoId: string, data: string): Promise<Set<string>> {
+export type Intervalo = { inicio: Date; fim: Date };
+
+/**
+ * Dois atendimentos se cruzam quando um começa antes de o outro terminar, dos
+ * dois lados. Limites encostados não contam: um serviço que termina 10:00 não
+ * conflita com outro que começa 10:00.
+ */
+export const seSobrepoe = (alvo: Intervalo, ocupados: Intervalo[]): boolean =>
+  ocupados.some((ocupado) => alvo.inicio < ocupado.fim && ocupado.inicio < alvo.fim);
+
+/**
+ * Intervalos ocupados no salão naquele dia.
+ *
+ * Precisa ser intervalo, não hora de início: um serviço de 60 min às 10:00
+ * ocupa a agenda até as 11:00 e tem de bloquear também um de 30 min às 10:30.
+ *
+ * A busca começa um pouco antes do dia porque um atendimento iniciado na
+ * véspera pode atravessar a meia-noite e invadir a manhã seguinte.
+ */
+async function intervalosOcupados(salaoId: string, data: string): Promise<Intervalo[]> {
+  const inicioDoDia = instanteDe(data, "00:00");
+  const fimDoDia = instanteDe(proximoDia(data), "00:00");
+  const margem = new Date(inicioDoDia.getTime() - DURACAO_MAXIMA_MIN * 60_000);
+
   const agendamentos = await prisma.agendamento.findMany({
     where: {
       salaoId,
       status: { in: [...STATUS_QUE_OCUPAM] },
-      // Intervalo do dia local, convertido para instantes.
-      dataHora: { gte: instanteDe(data, "00:00"), lt: instanteDe(proximoDia(data), "00:00") },
+      dataHora: { gte: margem, lt: fimDoDia },
     },
-    select: { dataHora: true },
+    select: { dataHora: true, duracaoMin: true },
   });
 
-  return new Set(agendamentos.map((agendamento) => localDe(agendamento.dataHora).hora));
+  return agendamentos.map((agendamento) => ({
+    inicio: agendamento.dataHora,
+    fim: new Date(agendamento.dataHora.getTime() + agendamento.duracaoMin * 60_000),
+  }));
 }
+
+/** Teto de duração de um serviço, igual ao validado no schema Zod. */
+export const DURACAO_MAXIMA_MIN = 600;
 
 /** "2026-10-05" → "2026-10-06", respeitando viradas de mês e ano. */
 function proximoDia(data: string): string {
