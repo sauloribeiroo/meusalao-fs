@@ -34,3 +34,11 @@ export class ErroDeCredenciais extends ErroDeNegocio {
     this.name = "ErroDeCredenciais";
   }
 }
+
+/** Usuário autenticado tentando agir sobre um recurso que não é seu. */
+export class ErroDeAutorizacao extends ErroDeNegocio {
+  constructor() {
+    super("Você não tem permissão para esta ação", "AUTORIZACAO");
+    this.name = "ErroDeAutorizacao";
+  }
+}
