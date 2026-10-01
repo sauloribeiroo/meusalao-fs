@@ -34,3 +34,27 @@ export class ErroDeCredenciais extends ErroDeNegocio {
     this.name = "ErroDeCredenciais";
   }
 }
+
+/** Recurso inexistente — ou que o usuário não tem direito de enxergar. */
+export class ErroNaoEncontrado extends ErroDeNegocio {
+  constructor(mensagem = "Recurso não encontrado") {
+    super(mensagem, "NAO_ENCONTRADO");
+    this.name = "ErroNaoEncontrado";
+  }
+}
+
+/** Sessão ausente: o usuário precisa entrar antes de seguir. */
+export class ErroDeAutenticacao extends ErroDeNegocio {
+  constructor(mensagem = "É preciso estar autenticado") {
+    super(mensagem, "AUTENTICACAO");
+    this.name = "ErroDeAutenticacao";
+  }
+}
+
+/** Sessão existe, mas o papel não permite a ação (RGN07, RNF05). */
+export class ErroDeAutorizacao extends ErroDeNegocio {
+  constructor(mensagem = "Você não tem permissão para esta ação") {
+    super(mensagem, "AUTORIZACAO");
+    this.name = "ErroDeAutorizacao";
+  }
+}
