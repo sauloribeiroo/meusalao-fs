@@ -97,6 +97,20 @@ O login com Google é opcional: sem `AUTH_GOOGLE_ID`/`AUTH_GOOGLE_SECRET` no `.e
 
 Para ter dados com que trabalhar (salão, serviços e horários de demonstração), rode `npm run db:seed` — ele imprime as contas de teste criadas.
 
+### Demonstração no ambiente publicado
+
+Enquanto o cadastro de salão (RF03) não existe, o banco de produção nasce vazio e a busca não tem o que mostrar. Para semeá-lo uma vez, use `prisma/seed-demo.mjs`, que não lê o `.env`, não apaga nada e pode rodar mais de uma vez sem duplicar dados:
+
+```powershell
+$env:URL_BANCO_DEMO = "<connection string do banco>"
+$env:SENHA_DEMO     = "<senha das contas de demonstração>"
+$env:CONFIRMA_SEED  = "sim"
+node prisma/seed-demo.mjs
+Remove-Item Env:URL_BANCO_DEMO, Env:SENHA_DEMO, Env:CONFIRMA_SEED
+```
+
+As contas criadas (`dono@meusalao.dev` e `cliente@meusalao.dev`) ficam acessíveis em um site público — use uma senha que não seja reaproveitada em outro lugar.
+
 Scripts disponíveis: `dev`, `build`, `start`, `lint`, `typecheck`, `db:migrate`, `db:deploy`, `db:generate`, `db:seed`, `db:studio`.
 
 ## Deploy
