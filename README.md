@@ -176,9 +176,18 @@ O contrato completo dos endpoints está em [`docs/contrato-api.md`](docs/contrat
 - **Agendamento** (`/salao/[salaoId]/agendar`) — escolha do serviço e calendário de 21 dias, com os horários ocupados visíveis e desabilitados.
 - **Confirmação** (`.../confirmar` e `.../sucesso`) — revisão dos dados, confirmação e resumo.
 
-Como o cadastro de salão (RF03) ainda não existe, use `npm run db:seed` para criar um salão de demonstração com serviços, horários e contas de teste.
+### Sprint 3 — conta, descoberta e gestão
 
-A busca por nome e serviço, os filtros, o mapa e a área administrativa entram nas sprints seguintes — a tela inicial lista os salões publicados apenas para dar acesso ao agendamento.
+- **Recuperação de senha** (RF05) — token de uso único com validade de uma hora, guardado como hash. Sem provedor de e-mail configurado, o link é escrito no log do servidor.
+- **Edição de cadastro** (RF07) — dados do usuário (com troca de e-mail) e dados do salão, incluindo as coordenadas que alimentam o mapa.
+- **Proximidade** (RF11) — distância por Haversine e ordenação por perto, com degradação graciosa quando a localização não é concedida (RNF08).
+- **Mapa** (RF11) — Leaflet com OpenStreetMap, sem chave de API, com marcadores e alternância entre lista e mapa.
+- **Comparação** (RF13) — até três salões lado a lado, com destaque do menor preço de cada serviço.
+- **Agenda do salão** (RF25) — agendamentos recebidos por status, com confirmar, recusar e concluir, e tela de detalhe.
+
+Como o cadastro de salão (RF03) ainda não existe, use `npm run db:seed` para criar três salões de demonstração com serviços, horários e contas de teste.
+
+A busca por nome e serviço, os filtros avançados, a avaliação e a área administrativa entram nas sprints seguintes.
 
 ### Por que Next.js full-stack em vez de backend separado?
 

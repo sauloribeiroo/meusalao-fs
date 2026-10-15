@@ -1,7 +1,7 @@
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { ErroDeConflito, ErroDeCredenciais, ErroDeValidacao } from "@/services/erros";
-import { credenciaisSchema, novoUsuarioSchema } from "@/services/usuarios/schemas";
+import { credenciaisSchema, edicaoPerfilSchema, novoUsuarioSchema } from "@/services/usuarios/schemas";
 
 const RODADAS_HASH = 10;
 
@@ -103,4 +103,40 @@ export async function vincularContaSocial(params: {
 export async function buscarUsuarioPorId(id: string): Promise<UsuarioPublico | null> {
   const usuario = await prisma.usuario.findUnique({ where: { id } });
   return usuario ? paraPublico(usuario) : null;
+}
+
+/** Perfil com o telefone, que o `UsuarioPublico` não carrega. */
+export type PerfilEditavel = UsuarioPublico & { telefone: string | null };
+
+export async function buscarPerfil(id: string): Promise<PerfilEditavel | null> {
+  const usuario = await prisma.usuario.findUnique({ where: { id } });
+  return usuario ? { ...paraPublico(usuario), telefone: usuario.telefone } : null;
+}
+
+/**
+ * RF07 — atualiza nome, e-mail e telefone do próprio usuário.
+ *
+ * O e-mail é a chave de login, então a troca passa pela mesma checagem de
+ * unicidade do cadastro. Telefone em branco vira null, e não string vazia.
+ */
+export async function atualizarPerfil(id: string, dados: unknown): Promise<PerfilEditavel> {
+  const resultado = edicaoPerfilSchema.safeParse(dados);
+  if (!resultado.success) {
+    throw new ErroDeValidacao(resultado.error.flatten().fieldErrors as Record<string, string[]>);
+  }
+
+  const { nome, email, telefone } = resultado.data;
+
+  const emailEmUso = await prisma.usuario.findFirst({
+    where: { email, id: { not: id } },
+    select: { id: true },
+  });
+  if (emailEmUso) throw new ErroDeConflito("Já existe uma conta com este e-mail");
+
+  const usuario = await prisma.usuario.update({
+    where: { id },
+    data: { nome, email, telefone: telefone ?? null },
+  });
+
+  return { ...paraPublico(usuario), telefone: usuario.telefone };
 }

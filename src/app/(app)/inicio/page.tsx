@@ -2,9 +2,11 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import {
   Baby,
+  CalendarCheck,
   CalendarClock,
   Hand,
   MapPin,
+  MapPinned,
   Paintbrush,
   Scissors,
   Search,
@@ -12,6 +14,7 @@ import {
   SprayCan,
 } from "lucide-react";
 import { auth } from "@/auth";
+import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { prisma } from "@/lib/prisma";
@@ -97,7 +100,20 @@ export default async function InicioPage() {
             <h2 id="meu-salao" className="mb-4 text-lg font-semibold">
               Meu salão
             </h2>
-            <ul className="grid gap-3 sm:grid-cols-2">
+            <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <li>
+                <Link href="/salao/meu/agenda" className="block">
+                  <Card className="transition-colors hover:border-primary">
+                    <CardContent className="flex items-center gap-3 p-5">
+                      <CalendarCheck className="size-5 text-primary" aria-hidden />
+                      <div>
+                        <p className="font-medium">Agenda</p>
+                        <p className="text-sm text-muted-foreground">Confirme ou recuse pedidos.</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              </li>
               <li>
                 <Link href="/salao/meu/servicos" className="block">
                   <Card className="transition-colors hover:border-primary">
@@ -129,9 +145,18 @@ export default async function InicioPage() {
         )}
 
         <section aria-labelledby="proximos" className="mt-10">
-          <h2 id="proximos" className="mb-4 text-lg font-semibold">
-            Salões disponíveis
-          </h2>
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+            <h2 id="proximos" className="text-lg font-semibold">
+              Salões disponíveis
+            </h2>
+            <Link
+              href="/saloes"
+              className={buttonVariants({ variant: "outline", size: "sm" })}
+            >
+              <MapPinned aria-hidden />
+              Ver no mapa
+            </Link>
+          </div>
 
           {saloes.length === 0 ? (
             <Card>

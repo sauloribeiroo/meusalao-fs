@@ -48,12 +48,34 @@ model Usuario {
   imagem    String?
   criadoEm  DateTime @default(now())
 
-  contas       Conta[]
-  saloes       Salao[]       @relation("DonoSaloes")
-  agendamentos Agendamento[]
-  avaliacoes   Avaliacao[]
+  contas          Conta[]
+  saloes          Salao[]       @relation("DonoSaloes")
+  agendamentos    Agendamento[]
+  avaliacoes      Avaliacao[]
+  tokensDeSenha   TokenSenha[]
 
   @@map("usuarios")
+}
+
+/**
+ * Token de recuperação de senha (RF05).
+ *
+ * Guarda o hash, nunca o token em si: quem conseguir ler a tabela não consegue
+ * redefinir a senha de ninguém. É o mesmo princípio de `senhaHash`.
+ */
+model TokenSenha {
+  id        String    @id @default(cuid())
+  usuarioId String
+  tokenHash String    @unique
+  expiraEm  DateTime
+  // Preenchido no momento do uso: o token vale uma vez só.
+  usadoEm   DateTime?
+  criadoEm  DateTime  @default(now())
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([usuarioId])
+  @@map("tokens_senha")
 }
 
 model Salao {
