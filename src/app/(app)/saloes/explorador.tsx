@@ -70,7 +70,10 @@ export function ExploradorDeSaloes({ iniciais }: { iniciais: SalaoNaLista[] }) {
       },
       // RNF08: sem permissão, a lista continua — só perde a ordenação por perto.
       () => setLocalizacao("negada"),
-      { timeout: 10_000, maximumAge: 5 * 60_000 },
+      // enableHighAccuracy: no celular passa a usar o GPS, e não só a rede —
+      // é a diferença entre dezenas de metros e vários quilômetros.
+      // maximumAge 0: não reaproveita uma posição ruim guardada em cache.
+      { enableHighAccuracy: true, timeout: 10_000, maximumAge: 0 },
     );
   }, [buscarComOrigem]);
 
