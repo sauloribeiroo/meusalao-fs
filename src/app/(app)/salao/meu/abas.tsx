@@ -15,8 +15,10 @@ const ABAS = [
 export function AbasDoSalao() {
   const caminho = usePathname();
 
+  // As quatro abas não cabem na largura de um celular: rolam dentro do próprio
+  // container, em vez de arrastar a página inteira para o lado.
   return (
-    <nav aria-label="Seções do salão" className="-mb-px mt-6 flex gap-1">
+    <nav aria-label="Seções do salão" className="-mb-px mt-6 flex gap-1 overflow-x-auto">
       {ABAS.map(({ href, rotulo, Icone }) => {
         // startsWith para a aba seguir marcada no detalhe (/agenda/[id]).
         const ativa = caminho === href || caminho.startsWith(`${href}/`);
@@ -27,7 +29,9 @@ export function AbasDoSalao() {
             href={href}
             aria-current={ativa ? "page" : undefined}
             className={cn(
-              "flex items-center gap-2 rounded-t-lg border-b-2 px-4 py-3 text-sm font-medium transition-colors",
+              // shrink-0 e nowrap: sem eles o flex comprime as abas e quebra o
+              // rótulo em duas linhas, em vez de deixar o container rolar.
+              "flex shrink-0 items-center gap-2 whitespace-nowrap rounded-t-lg border-b-2 px-4 py-3 text-sm font-medium transition-colors",
               ativa
                 ? "border-primary text-primary"
                 : "border-transparent text-muted-foreground hover:text-foreground",
