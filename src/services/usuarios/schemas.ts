@@ -35,6 +35,26 @@ export const edicaoPerfilSchema = novoUsuarioSchema.pick({
   telefone: true,
 });
 
+/** A mesma regra de senha do cadastro (RGN08), reaproveitada na redefinição. */
+const senhaForte = novoUsuarioSchema.shape.senha;
+
+/** RF05 — pedido de recuperação. */
+export const solicitacaoSchema = z.object({
+  email: z.string().trim().min(1, "Informe o e-mail").email("E-mail inválido").toLowerCase(),
+});
+
+/** RF05 — definição da nova senha, com confirmação. */
+export const redefinicaoSchema = z
+  .object({
+    token: z.string().trim().min(1, "Link de recuperação inválido"),
+    senha: senhaForte,
+    confirmacao: z.string().min(1, "Repita a nova senha"),
+  })
+  .refine((dados) => dados.senha === dados.confirmacao, {
+    message: "As senhas não conferem",
+    path: ["confirmacao"],
+  });
+
 export type Credenciais = z.infer<typeof credenciaisSchema>;
 export type NovoUsuario = z.infer<typeof novoUsuarioSchema>;
 export type EdicaoPerfil = z.infer<typeof edicaoPerfilSchema>;
