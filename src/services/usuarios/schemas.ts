@@ -25,5 +25,16 @@ export const novoUsuarioSchema = z.object({
     .regex(/\d/, "A senha deve conter números"),
 });
 
+/**
+ * RF07 — dados que o usuário pode editar depois do cadastro.
+ * A senha não entra aqui: trocar senha é outro fluxo, com confirmação própria.
+ */
+export const edicaoPerfilSchema = novoUsuarioSchema.pick({
+  nome: true,
+  email: true,
+  telefone: true,
+});
+
 export type Credenciais = z.infer<typeof credenciaisSchema>;
 export type NovoUsuario = z.infer<typeof novoUsuarioSchema>;
+export type EdicaoPerfil = z.infer<typeof edicaoPerfilSchema>;

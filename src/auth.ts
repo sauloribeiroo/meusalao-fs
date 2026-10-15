@@ -10,7 +10,7 @@ import { autenticarUsuario, buscarUsuarioPorId, vincularContaSocial } from "@/se
 /** O login com Google só é oferecido quando as credenciais estão configuradas. */
 export const googleHabilitado = Boolean(process.env.AUTH_GOOGLE_ID && process.env.AUTH_GOOGLE_SECRET);
 
-export const { handlers, auth, signIn, signOut } = NextAuth({
+export const { handlers, auth, signIn, signOut, unstable_update: atualizarSessao } = NextAuth({
   ...authConfig,
   providers: [
     Credentials({
@@ -51,16 +51,21 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
 
     // O papel entra no token no login e acompanha a sessão dali em diante.
-    async jwt({ token, user }) {
-      if (user?.id) {
-        const usuario = await buscarUsuarioPorId(user.id);
-        if (usuario) {
-          token.sub = usuario.id;
-          token.name = usuario.nome;
-          token.email = usuario.email;
-          token.papel = usuario.papel;
-        }
+    // `trigger: "update"` relê o usuário do banco: é o que mantém o cabeçalho
+    // e a sessão em dia depois de o próprio usuário editar nome ou e-mail (RF07),
+    // sem obrigá-lo a sair e entrar de novo.
+    async jwt({ token, user, trigger }) {
+      const id = user?.id ?? (trigger === "update" ? token.sub : undefined);
+      if (!id) return token;
+
+      const usuario = await buscarUsuarioPorId(id);
+      if (usuario) {
+        token.sub = usuario.id;
+        token.name = usuario.nome;
+        token.email = usuario.email;
+        token.papel = usuario.papel;
       }
+
       return token;
     },
 

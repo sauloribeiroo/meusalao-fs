@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
-import { ErroDeAutorizacao, ErroNaoEncontrado } from "@/services/erros";
+import { ErroDeAutorizacao, ErroDeValidacao, ErroNaoEncontrado } from "@/services/erros";
+import { edicaoSalaoSchema } from "@/services/saloes/schemas";
 
 /**
  * Resolução do salão em que o dono autenticado está trabalhando.
@@ -48,6 +49,70 @@ export async function exigirSalaoDoUsuario(
   }
 
   return { id: salao.id, nome: salao.nome };
+}
+
+/** Dados do salão como a tela de edição precisa deles. */
+export type SalaoEditavel = {
+  id: string;
+  nome: string;
+  descricao: string | null;
+  endereco: string;
+  telefone: string | null;
+  tipo: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  publicado: boolean;
+};
+
+export async function buscarSalaoEditavel(salaoId: string): Promise<SalaoEditavel> {
+  const salao = await prisma.salao.findUnique({
+    where: { id: salaoId },
+    select: {
+      id: true,
+      nome: true,
+      descricao: true,
+      endereco: true,
+      telefone: true,
+      tipo: true,
+      latitude: true,
+      longitude: true,
+      publicado: true,
+    },
+  });
+
+  if (!salao) throw new ErroNaoEncontrado("Salão não encontrado");
+
+  return salao;
+}
+
+/**
+ * RF07 — atualiza os dados cadastrais do salão.
+ *
+ * Quem pode editar já foi resolvido antes de chegar aqui: o chamador passa um
+ * salaoId que confirmou pertencer ao usuário (RGN07).
+ */
+export async function atualizarSalao(salaoId: string, dados: unknown): Promise<SalaoEditavel> {
+  const resultado = edicaoSalaoSchema.safeParse(dados);
+  if (!resultado.success) {
+    throw new ErroDeValidacao(resultado.error.flatten().fieldErrors as Record<string, string[]>);
+  }
+
+  const { nome, endereco, descricao, tipo, telefone, latitude, longitude } = resultado.data;
+
+  await prisma.salao.update({
+    where: { id: salaoId },
+    data: {
+      nome,
+      endereco,
+      descricao: descricao ?? null,
+      tipo: tipo ?? null,
+      telefone: telefone ?? null,
+      latitude: latitude ?? null,
+      longitude: longitude ?? null,
+    },
+  });
+
+  return buscarSalaoEditavel(salaoId);
 }
 
 /** Existência do salão, para as rotas públicas (busca, disponibilidade). */
