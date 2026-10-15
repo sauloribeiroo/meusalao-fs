@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import {
   Baby,
+  CalendarCheck,
   CalendarClock,
   Hand,
   MapPin,
@@ -99,7 +100,20 @@ export default async function InicioPage() {
             <h2 id="meu-salao" className="mb-4 text-lg font-semibold">
               Meu salão
             </h2>
-            <ul className="grid gap-3 sm:grid-cols-2">
+            <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <li>
+                <Link href="/salao/meu/agenda" className="block">
+                  <Card className="transition-colors hover:border-primary">
+                    <CardContent className="flex items-center gap-3 p-5">
+                      <CalendarCheck className="size-5 text-primary" aria-hidden />
+                      <div>
+                        <p className="font-medium">Agenda</p>
+                        <p className="text-sm text-muted-foreground">Confirme ou recuse pedidos.</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              </li>
               <li>
                 <Link href="/salao/meu/servicos" className="block">
                   <Card className="transition-colors hover:border-primary">

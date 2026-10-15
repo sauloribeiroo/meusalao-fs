@@ -17,7 +17,7 @@ export default async function SalaoLayout({ children }: { children: React.ReactN
         <div className="mx-auto max-w-5xl px-6 pt-8">
           <h1 className="text-2xl font-black tracking-tight">Meu salão</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Gerencie os serviços e os horários que os clientes veem ao agendar.
+            Acompanhe os agendamentos recebidos e mantenha dados, serviços e horários em dia.
           </p>
           <AbasDoSalao />
         </div>

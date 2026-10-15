@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CalendarClock, Scissors, Store } from "lucide-react";
+import { CalendarCheck, CalendarClock, Scissors, Store } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const ABAS = [
+  { href: "/salao/meu/agenda", rotulo: "Agenda", Icone: CalendarCheck },
   { href: "/salao/meu/dados", rotulo: "Dados", Icone: Store },
   { href: "/salao/meu/servicos", rotulo: "Serviços", Icone: Scissors },
   { href: "/salao/meu/horarios", rotulo: "Horários", Icone: CalendarClock },
@@ -17,7 +18,8 @@ export function AbasDoSalao() {
   return (
     <nav aria-label="Seções do salão" className="-mb-px mt-6 flex gap-1">
       {ABAS.map(({ href, rotulo, Icone }) => {
-        const ativa = caminho === href;
+        // startsWith para a aba seguir marcada no detalhe (/agenda/[id]).
+        const ativa = caminho === href || caminho.startsWith(`${href}/`);
 
         return (
           <Link
