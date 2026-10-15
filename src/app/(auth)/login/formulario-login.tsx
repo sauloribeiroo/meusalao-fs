@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
+import Link from "next/link";
 import { LogIn } from "lucide-react";
 import { entrarAction, type EstadoFormulario } from "@/acoes/sessao";
 import { Campo } from "@/components/campo";
@@ -19,7 +20,14 @@ export function FormularioLogin() {
     // digitado continua na tela quando a senha está errada.
     <form key={JSON.stringify(valores)} action={action} className="space-y-4" noValidate>
       <Campo label="E-mail" name="email" type="email" autoComplete="email" required defaultValue={valores.email} />
-      <Campo label="Senha" name="senha" type="password" autoComplete="current-password" required />
+      <div className="space-y-1.5">
+        <Campo label="Senha" name="senha" type="password" autoComplete="current-password" required />
+        <p className="text-right">
+          <Link href="/esqueci-senha" className="text-xs font-medium text-primary hover:underline">
+            Esqueci minha senha
+          </Link>
+        </p>
+      </div>
 
       {estado.mensagem && <AlertaErro>{estado.mensagem}</AlertaErro>}
 
