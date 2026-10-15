@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { LogOut, Scissors } from "lucide-react";
+import { LogOut, Scissors, UserRound } from "lucide-react";
 import { sairAction } from "@/acoes/sessao";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 
 export function Cabecalho({ nome }: { nome: string }) {
   return (
@@ -12,8 +12,15 @@ export function Cabecalho({ nome }: { nome: string }) {
           MeuSalão
         </Link>
 
-        <div className="flex items-center gap-2">
-          <span className="hidden text-sm text-muted-foreground sm:inline">{nome}</span>
+        <div className="flex items-center gap-1">
+          <Link
+            href="/perfil"
+            className={buttonVariants({ variant: "ghost", size: "sm" })}
+            aria-label="Meus dados"
+          >
+            <UserRound aria-hidden />
+            <span className="hidden sm:inline">{nome}</span>
+          </Link>
           <form action={sairAction}>
             <Button type="submit" variant="ghost" size="sm">
               <LogOut aria-hidden />
