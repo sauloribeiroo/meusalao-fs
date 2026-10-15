@@ -184,6 +184,74 @@ export async function listarSaloesPublicados(origem?: Coordenada | null): Promis
   });
 }
 
+export type SalaoComparado = {
+  id: string;
+  nome: string;
+  tipo: string | null;
+  endereco: string;
+  distanciaKm: number | null;
+  /** Null enquanto o salão não tiver avaliações (RF19 / issue #26). */
+  notaMedia: number | null;
+  totalAvaliacoes: number;
+  servicos: { nome: string; preco: number | null; duracaoMin: number }[];
+};
+
+/** Quantos salões cabem numa comparação legível lado a lado. */
+export const MAXIMO_COMPARACAO = 3;
+
+/**
+ * RF13 — dados dos salões escolhidos para comparação.
+ *
+ * Devolve na ordem em que os ids foram pedidos, para as colunas da tabela não
+ * trocarem de lugar a cada carregamento. Id inexistente ou de salão não
+ * publicado é simplesmente ignorado (RGN05).
+ */
+export async function compararSaloes(ids: string[], origem?: Coordenada | null): Promise<SalaoComparado[]> {
+  const escolhidos = [...new Set(ids)].slice(0, MAXIMO_COMPARACAO);
+  if (escolhidos.length === 0) return [];
+
+  const saloes = await prisma.salao.findMany({
+    where: { id: { in: escolhidos }, publicado: true },
+    select: {
+      id: true,
+      nome: true,
+      tipo: true,
+      endereco: true,
+      latitude: true,
+      longitude: true,
+      servicos: { select: { nome: true, preco: true, duracaoMin: true }, orderBy: { nome: "asc" } },
+      avaliacoes: { select: { nota: true } },
+    },
+  });
+
+  const porId = new Map(saloes.map((salao) => [salao.id, salao]));
+
+  return escolhidos
+    .map((id) => porId.get(id))
+    .filter((salao): salao is NonNullable<typeof salao> => Boolean(salao))
+    .map((salao) => {
+      const notas = salao.avaliacoes.map((avaliacao) => avaliacao.nota);
+
+      return {
+        id: salao.id,
+        nome: salao.nome,
+        tipo: salao.tipo,
+        endereco: salao.endereco,
+        distanciaKm:
+          origem && coordenadaValida(salao.latitude, salao.longitude)
+            ? distanciaEmKm(origem, { latitude: salao.latitude!, longitude: salao.longitude! })
+            : null,
+        notaMedia: notas.length ? notas.reduce((a, b) => a + b, 0) / notas.length : null,
+        totalAvaliacoes: notas.length,
+        servicos: salao.servicos.map((servico) => ({
+          nome: servico.nome,
+          preco: servico.preco === null ? null : Number(servico.preco),
+          duracaoMin: servico.duracaoMin,
+        })),
+      };
+    });
+}
+
 /** Existência do salão, para as rotas públicas (busca, disponibilidade). */
 export async function exigirSalao(salaoId: string): Promise<{ id: string; nome: string; publicado: boolean }> {
   const salao = await prisma.salao.findUnique({

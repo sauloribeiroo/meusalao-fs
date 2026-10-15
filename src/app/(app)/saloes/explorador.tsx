@@ -3,13 +3,13 @@
 import { useCallback, useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { List, Loader2, MapPin, MapPinned, Navigation } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { List, Loader2, MapPin, MapPinned, Navigation, Scale } from "lucide-react";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { precoEmReais } from "@/lib/formato";
 import { cn } from "@/lib/utils";
 import { distanciaLegivel } from "@/services/saloes/distancia";
-import type { SalaoNaLista } from "@/services/saloes/saloes.service";
+import { MAXIMO_COMPARACAO, type SalaoNaLista } from "@/services/saloes/saloes.service";
 
 // O Leaflet precisa de `window`, então o componente não pode ser renderizado
 // no servidor.
@@ -31,6 +31,17 @@ export function ExploradorDeSaloes({ iniciais }: { iniciais: SalaoNaLista[] }) {
   const [origem, setOrigem] = useState<Origem | null>(null);
   const [localizacao, setLocalizacao] = useState<Localizacao>("inicial");
   const [visao, setVisao] = useState<"lista" | "mapa">("lista");
+  const [selecionados, setSelecionados] = useState<string[]>([]);
+
+  /** RF13 — no máximo três salões por comparação, para a tabela caber na tela. */
+  const alternarSelecao = (id: string) =>
+    setSelecionados((atual) =>
+      atual.includes(id)
+        ? atual.filter((outro) => outro !== id)
+        : atual.length >= MAXIMO_COMPARACAO
+          ? atual
+          : [...atual, id],
+    );
 
   const comCoordenadas = saloes.filter((salao) => salao.latitude !== null && salao.longitude !== null);
 
@@ -104,34 +115,76 @@ export function ExploradorDeSaloes({ iniciais }: { iniciais: SalaoNaLista[] }) {
         )
       ) : (
         <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {saloes.map((salao) => (
-            <li key={salao.id}>
-              <Link href={`/salao/${salao.id}/agendar`} className="block h-full">
-                <Card className="h-full transition-colors hover:border-primary">
-                  <CardContent className="p-5">
-                    <div className="flex items-start justify-between gap-2">
-                      <p className="font-medium">{salao.nome}</p>
-                      {salao.distanciaKm !== null && (
-                        <span className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
-                          {distanciaLegivel(salao.distanciaKm)}
-                        </span>
-                      )}
-                    </div>
-                    {salao.tipo && <p className="mt-0.5 text-xs text-primary">{salao.tipo}</p>}
-                    <p className="mt-2 flex items-start gap-1.5 text-sm text-muted-foreground">
-                      <MapPin className="mt-0.5 size-3.5 shrink-0" aria-hidden />
-                      {salao.endereco}
-                    </p>
-                    <p className="mt-3 text-sm">
-                      <span className="text-muted-foreground">A partir de </span>
-                      <span className="font-semibold">{precoEmReais(salao.precoMinimo)}</span>
-                    </p>
+          {saloes.map((salao) => {
+            const marcado = selecionados.includes(salao.id);
+
+            return (
+              <li key={salao.id}>
+                <Card className={cn("h-full transition-colors", marcado && "border-primary")}>
+                  <CardContent className="flex h-full flex-col p-5">
+                    <Link href={`/salao/${salao.id}/agendar`} className="flex-1">
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="font-medium">{salao.nome}</p>
+                        {salao.distanciaKm !== null && (
+                          <span className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
+                            {distanciaLegivel(salao.distanciaKm)}
+                          </span>
+                        )}
+                      </div>
+                      {salao.tipo && <p className="mt-0.5 text-xs text-primary">{salao.tipo}</p>}
+                      <p className="mt-2 flex items-start gap-1.5 text-sm text-muted-foreground">
+                        <MapPin className="mt-0.5 size-3.5 shrink-0" aria-hidden />
+                        {salao.endereco}
+                      </p>
+                      <p className="mt-3 text-sm">
+                        <span className="text-muted-foreground">A partir de </span>
+                        <span className="font-semibold">{precoEmReais(salao.precoMinimo)}</span>
+                      </p>
+                    </Link>
+
+                    <label className="mt-4 flex w-fit cursor-pointer items-center gap-2 border-t border-border pt-3 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={marcado}
+                        onChange={() => alternarSelecao(salao.id)}
+                        disabled={!marcado && selecionados.length >= MAXIMO_COMPARACAO}
+                        className="size-4 rounded border-input accent-primary disabled:opacity-40"
+                      />
+                      <span className={cn(!marcado && selecionados.length >= MAXIMO_COMPARACAO && "opacity-40")}>
+                        Comparar
+                      </span>
+                    </label>
                   </CardContent>
                 </Card>
-              </Link>
-            </li>
-          ))}
+              </li>
+            );
+          })}
         </ul>
+      )}
+
+      {selecionados.length > 0 && (
+        <div className="sticky bottom-4 z-10 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card p-4 shadow-lg">
+          <p className="text-sm">
+            <strong>{selecionados.length}</strong> de {MAXIMO_COMPARACAO} salões selecionados
+          </p>
+          <div className="flex gap-2">
+            <Button type="button" variant="ghost" size="sm" onClick={() => setSelecionados([])}>
+              Limpar
+            </Button>
+            <Link
+              href={`/saloes/comparar?ids=${selecionados.join(",")}`}
+              aria-disabled={selecionados.length < 2}
+              onClick={(evento) => selecionados.length < 2 && evento.preventDefault()}
+              className={cn(
+                buttonVariants({ size: "sm" }),
+                selecionados.length < 2 && "pointer-events-none opacity-50",
+              )}
+            >
+              <Scale aria-hidden />
+              Comparar
+            </Link>
+          </div>
+        </div>
       )}
 
       {saloes.length === 0 && visao === "lista" && (
