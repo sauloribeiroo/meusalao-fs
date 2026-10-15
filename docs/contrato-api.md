@@ -1,8 +1,13 @@
-# Contrato da API — Sprint 2
+# Contrato da API
 
-Endpoints entregues na Sprint 2 (backend). Serve de referência para as telas
-#19 (calendário de disponibilidade), #21 (confirmação de agendamento), #29
-(cadastro de serviços) e #33 (configuração de horários).
+Endpoints REST do MeuSalão, entregues nas Sprints 2 e 3.
+
+> Nem toda funcionalidade passa por HTTP. As ações que partem de um formulário
+> — editar cadastro (RF07), recuperar senha (RF05), confirmar um agendamento
+> (RF25) — são **Server Actions**, em `src/acoes/`. Elas chamam a mesma camada
+> de serviços das rotas abaixo, com a mesma sequência (sessão → papel → Zod →
+> serviço), só sem o salto pela rede. Este documento cobre a API REST, que é o
+> que se consome de fora da aplicação.
 
 Todas as respostas são JSON. Valores monetários vão como número (`80.5`) ou
 `null` — `null` significa "Consultar preço" (RGN06).
@@ -48,6 +53,44 @@ Em erro de validação vem também `campos`, no formato que o formulário consom
 A `mensagem` já vem escrita para o usuário final — dá para exibir direto.
 
 ---
+
+## Salões (#12 · RF11)
+
+### `GET /api/saloes` — público
+
+Salões publicados (RGN05), ordenados por nome.
+
+### `GET /api/saloes?lat=-3.74&lng=-38.49` — público
+
+Os mesmos salões, agora com `distanciaKm` e ordenados por proximidade.
+
+```json
+{
+  "comLocalizacao": true,
+  "saloes": [
+    {
+      "id": "c...",
+      "nome": "Salão da Márcia",
+      "endereco": "Rua das Flores, 120 — Aldeota, Fortaleza/CE",
+      "tipo": "Salão de bairro",
+      "latitude": -3.7437,
+      "longitude": -38.4968,
+      "distanciaKm": 1.12,
+      "precoMinimo": 40,
+      "totalServicos": 5
+    }
+  ]
+}
+```
+
+- `lat` e `lng` vão juntos: mandar só um dá 422.
+- `distanciaKm` é `null` quando não há localização **ou** quando o salão não tem
+  coordenadas cadastradas. Esses salões não somem da lista — aparecem no fim
+  (RNF08: sem a permissão de geolocalização, a busca continua funcionando).
+- `precoMinimo` é `null` quando nenhum serviço tem preço: exiba "Consultar
+  preço" (RGN06).
+- A distância usa a fórmula de Haversine, com erro de até 0,5% — suficiente para
+  ordenar e para exibir "a 1,1 km de você".
 
 ## Serviços (#28 · RF20)
 
@@ -281,7 +324,24 @@ RGN06) e horários de segunda a sábado. Contas:
 | Dono de salão | `dono@meusalao.dev` | `Senha123` |
 | Cliente | `cliente@meusalao.dev` | `Senha123` |
 
+## Server Actions (sem rota REST)
+
+Entregues na Sprint 3, em `src/acoes/`:
+
+| Arquivo | Ação | RF |
+|---|---|---|
+| `perfil.ts` | `atualizarPerfilAction`, `atualizarSalaoAction` | RF07 |
+| `recuperacao.ts` | `solicitarRecuperacaoAction`, `redefinirSenhaAction` | RF05 |
+| `agenda.ts` | `aplicarAcaoAction` (confirmar/recusar/concluir) | RF25 |
+| `servicos.ts`, `horarios.ts`, `agendamentos.ts` | telas da Sprint 2 | RF20, RF22, RF16 |
+
+Sobre a recuperação de senha: **não há provedor de e-mail configurado**. O
+`src/services/email.ts` escreve a mensagem no log do servidor, e o link aparece
+no terminal. Trocar por Resend ou SMTP é mexer só nessa função.
+
 ## Ainda não implementado
 
-Cancelamento pelo cliente (#24), listagem com filtros avançados (#10), perfil
-público do salão (#14), cadastro de salão (#8), métricas do dashboard (#36).
+Cadastro de salão (#8), busca por nome e filtros avançados (#10), perfil público
+do salão (#14), seleção de serviço dedicada (#17), cancelamento pelo cliente
+(#24), avaliação (#26), importação CSV (#30), publicação do perfil (#34),
+métricas do dashboard (#36) e módulo administrativo (#40).

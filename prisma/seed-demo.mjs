@@ -1,5 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import { CLIENTE, SALOES } from "./dados-demo.mjs";
 
 /**
  * Semeia dados de demonstração em um banco REMOTO (ex.: o Neon de produção),
@@ -43,102 +44,69 @@ if (process.env.CONFIRMA_SEED !== "sim") {
 
 const prisma = new PrismaClient({ datasourceUrl: url });
 
-const EMAIL_DONO = "dono@meusalao.dev";
-const EMAIL_CLIENTE = "cliente@meusalao.dev";
-
-const SERVICOS = [
-  { nome: "Corte feminino", preco: 80.0, duracaoMin: 60 },
-  { nome: "Corte masculino", preco: 45.0, duracaoMin: 30 },
-  { nome: "Manicure", preco: 40.0, duracaoMin: 45 },
-  { nome: "Escova", preco: 70.0, duracaoMin: 60 },
-  // Sem preço de propósito: exercita a RGN06 ("Consultar preço").
-  { nome: "Barba", preco: null, duracaoMin: 30 },
-];
-
-const HORARIOS = [
-  { diaSemana: "SEG", horaAbertura: "09:00", horaFechamento: "18:00", ativo: true },
-  { diaSemana: "TER", horaAbertura: "09:00", horaFechamento: "18:00", ativo: true },
-  { diaSemana: "QUA", horaAbertura: "09:00", horaFechamento: "18:00", ativo: true },
-  { diaSemana: "QUI", horaAbertura: "09:00", horaFechamento: "18:00", ativo: true },
-  { diaSemana: "SEX", horaAbertura: "09:00", horaFechamento: "18:00", ativo: true },
-  { diaSemana: "SAB", horaAbertura: "09:00", horaFechamento: "13:00", ativo: true },
-  { diaSemana: "DOM", horaAbertura: "09:00", horaFechamento: "13:00", ativo: false },
-];
-
 async function main() {
   console.log(`Alvo: ${new URL(url).host}`);
   const senhaHash = await bcrypt.hash(senha, 10);
 
-  const dono = await prisma.usuario.upsert({
-    where: { email: EMAIL_DONO },
-    update: { papel: "DONO_SALAO", senhaHash },
-    create: {
-      nome: "Márcia Oliveira",
-      email: EMAIL_DONO,
-      telefone: "(85) 99999-0001",
-      senhaHash,
-      papel: "DONO_SALAO",
-    },
-  });
-
   await prisma.usuario.upsert({
-    where: { email: EMAIL_CLIENTE },
+    where: { email: CLIENTE.email },
     update: { senhaHash },
-    create: {
-      nome: "Ana Souza",
-      email: EMAIL_CLIENTE,
-      telefone: "(85) 99999-0002",
-      senhaHash,
-      papel: "CLIENTE",
-    },
+    create: { ...CLIENTE, senhaHash, papel: "CLIENTE" },
   });
 
-  // Reaproveita o salão que já existir deste dono, em vez de recriar.
-  const existente = await prisma.salao.findFirst({ where: { donoId: dono.id }, select: { id: true } });
+  const resumo = [];
 
-  const salao = existente
-    ? await prisma.salao.update({ where: { id: existente.id }, data: { publicado: true } })
-    : await prisma.salao.create({
-        data: {
-          donoId: dono.id,
-          nome: "Salão da Márcia",
-          descricao: "Salão de bairro com atendimento personalizado há mais de 10 anos.",
-          endereco: "Rua das Flores, 120 — Aldeota, Fortaleza/CE",
-          telefone: "(85) 3333-0001",
-          latitude: -3.7437,
-          longitude: -38.4968,
-          tipo: "Salão de bairro",
-          publicado: true,
-        },
+  for (const { dono, salao: dados, servicos, horarios } of SALOES) {
+    const usuario = await prisma.usuario.upsert({
+      where: { email: dono.email },
+      update: { papel: "DONO_SALAO", senhaHash },
+      create: { ...dono, senhaHash, papel: "DONO_SALAO" },
+    });
+
+    // Reaproveita o salão que já existir deste dono, em vez de recriar: assim
+    // rodar de novo não derruba agendamentos nem edições feitas na aplicação.
+    const existente = await prisma.salao.findFirst({ where: { donoId: usuario.id }, select: { id: true } });
+
+    const salao = existente
+      ? await prisma.salao.update({ where: { id: existente.id }, data: { publicado: true } })
+      : await prisma.salao.create({ data: { donoId: usuario.id, ...dados } });
+
+    let criados = 0;
+    for (const servico of servicos) {
+      const ja = await prisma.servico.findFirst({
+        where: { salaoId: salao.id, nome: servico.nome },
+        select: { id: true },
       });
+      if (ja) continue;
 
-  let criados = 0;
-  for (const servico of SERVICOS) {
-    const ja = await prisma.servico.findFirst({
-      where: { salaoId: salao.id, nome: servico.nome },
-      select: { id: true },
-    });
-    if (ja) continue;
+      await prisma.servico.create({ data: { salaoId: salao.id, ...servico } });
+      criados += 1;
+    }
 
-    await prisma.servico.create({ data: { salaoId: salao.id, ...servico } });
-    criados += 1;
+    for (const horario of horarios) {
+      await prisma.horarioFuncionamento.upsert({
+        where: { salaoId_diaSemana: { salaoId: salao.id, diaSemana: horario.diaSemana } },
+        update: {
+          horaAbertura: horario.horaAbertura,
+          horaFechamento: horario.horaFechamento,
+          ativo: horario.ativo,
+        },
+        create: { salaoId: salao.id, ...horario },
+      });
+    }
+
+    const total = await prisma.servico.count({ where: { salaoId: salao.id } });
+    resumo.push({ nome: salao.nome, email: dono.email, total, criados });
   }
-
-  for (const horario of HORARIOS) {
-    await prisma.horarioFuncionamento.upsert({
-      where: { salaoId_diaSemana: { salaoId: salao.id, diaSemana: horario.diaSemana } },
-      update: { horaAbertura: horario.horaAbertura, horaFechamento: horario.horaFechamento, ativo: horario.ativo },
-      create: { salaoId: salao.id, ...horario },
-    });
-  }
-
-  const totalServicos = await prisma.servico.count({ where: { salaoId: salao.id } });
 
   console.log("Seed de demonstração concluído.");
-  console.log(`  Salão:    ${salao.nome} (${salao.id}) — publicado`);
-  console.log(`  Serviços: ${totalServicos} no total, ${criados} criados agora`);
-  console.log(`  Contas:   ${EMAIL_DONO} e ${EMAIL_CLIENTE}, com a senha informada`);
+  for (const salao of resumo) {
+    console.log(`  ${salao.nome.padEnd(16)} ${salao.total} serviços (${salao.criados} criados agora) — dono ${salao.email}`);
+  }
+  console.log(`  Cliente: ${CLIENTE.email}`);
+  console.log("  Todas as contas usam a senha informada em SENHA_DEMO.");
 }
+
 
 main()
   .catch((erro) => {
