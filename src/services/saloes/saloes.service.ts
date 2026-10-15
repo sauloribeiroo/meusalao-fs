@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { ErroDeAutorizacao, ErroDeValidacao, ErroNaoEncontrado } from "@/services/erros";
+import { coordenadaValida, distanciaEmKm, type Coordenada } from "@/services/saloes/distancia";
 import { edicaoSalaoSchema } from "@/services/saloes/schemas";
 
 /**
@@ -113,6 +114,74 @@ export async function atualizarSalao(salaoId: string, dados: unknown): Promise<S
   });
 
   return buscarSalaoEditavel(salaoId);
+}
+
+/** Salão como aparece na listagem pública e no mapa. */
+export type SalaoNaLista = {
+  id: string;
+  nome: string;
+  endereco: string;
+  tipo: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  /** Null quando não há localização do usuário ou o salão não tem coordenadas. */
+  distanciaKm: number | null;
+  /** Menor preço entre os serviços; null exibe "Consultar preço" (RGN06). */
+  precoMinimo: number | null;
+  totalServicos: number;
+};
+
+/**
+ * RF11 — salões publicados, ordenados por proximidade quando há localização.
+ *
+ * Sem a permissão de geolocalização, a lista continua funcionando, ordenada por
+ * nome — é a degradação graciosa que o RNF08 pede. Salão sem coordenadas nunca
+ * é descartado: entra depois dos que têm distância conhecida.
+ */
+export async function listarSaloesPublicados(origem?: Coordenada | null): Promise<SalaoNaLista[]> {
+  // RGN05: só salão publicado aparece na busca e no mapa.
+  const saloes = await prisma.salao.findMany({
+    where: { publicado: true },
+    select: {
+      id: true,
+      nome: true,
+      endereco: true,
+      tipo: true,
+      latitude: true,
+      longitude: true,
+      servicos: { select: { preco: true } },
+    },
+  });
+
+  const lista = saloes.map((salao) => {
+    const precos = salao.servicos
+      .map((servico) => (servico.preco === null ? null : Number(servico.preco)))
+      .filter((preco): preco is number => preco !== null);
+
+    return {
+      id: salao.id,
+      nome: salao.nome,
+      endereco: salao.endereco,
+      tipo: salao.tipo,
+      latitude: salao.latitude,
+      longitude: salao.longitude,
+      distanciaKm:
+        origem && coordenadaValida(salao.latitude, salao.longitude)
+          ? distanciaEmKm(origem, { latitude: salao.latitude!, longitude: salao.longitude! })
+          : null,
+      precoMinimo: precos.length ? Math.min(...precos) : null,
+      totalServicos: salao.servicos.length,
+    };
+  });
+
+  return lista.sort((a, b) => {
+    if (a.distanciaKm !== null && b.distanciaKm !== null) return a.distanciaKm - b.distanciaKm;
+    // Quem tem distância conhecida vem antes de quem não tem.
+    if (a.distanciaKm !== null) return -1;
+    if (b.distanciaKm !== null) return 1;
+
+    return a.nome.localeCompare(b.nome, "pt-BR");
+  });
 }
 
 /** Existência do salão, para as rotas públicas (busca, disponibilidade). */
