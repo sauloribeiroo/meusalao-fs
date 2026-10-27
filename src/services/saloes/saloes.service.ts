@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { ErroDeAutorizacao, ErroDeValidacao, ErroNaoEncontrado } from "@/services/erros";
+import { ErroDeAutorizacao, ErroDeConflito, ErroDeValidacao, ErroNaoEncontrado } from "@/services/erros";
 import { coordenadaValida, distanciaEmKm, type Coordenada } from "@/services/saloes/distancia";
 import { edicaoSalaoSchema } from "@/services/saloes/schemas";
 
@@ -250,6 +250,109 @@ export async function compararSaloes(ids: string[], origem?: Coordenada | null):
         })),
       };
     });
+}
+
+/** Um requisito da RGN05, já resolvido em "cumprido ou não". */
+export type RequisitoDePublicacao = {
+  chave: "dados" | "servicos" | "horarios" | "localizacao";
+  rotulo: string;
+  cumprido: boolean;
+  /** Impede a publicação, ou é só recomendação? */
+  obrigatorio: boolean;
+  comoResolver: string;
+};
+
+export type SituacaoDePublicacao = {
+  publicado: boolean;
+  podePublicar: boolean;
+  requisitos: RequisitoDePublicacao[];
+};
+
+/**
+ * RGN05 — o que falta para o salão poder aparecer na busca e no mapa.
+ *
+ * Devolve a lista inteira, e não só o primeiro problema, porque a tela precisa
+ * mostrar um checklist: resolver um item de cada vez, descobrindo o próximo a
+ * cada tentativa, é um fluxo ruim para quem está cadastrando o salão.
+ *
+ * A localização entra como recomendação, não como bloqueio: um salão sem
+ * coordenadas ainda funciona na lista e no agendamento — só não aparece no mapa
+ * nem na ordenação por proximidade.
+ */
+export async function situacaoDePublicacao(salaoId: string): Promise<SituacaoDePublicacao> {
+  const salao = await prisma.salao.findUnique({
+    where: { id: salaoId },
+    select: {
+      publicado: true,
+      nome: true,
+      endereco: true,
+      latitude: true,
+      longitude: true,
+      _count: { select: { servicos: true } },
+      horarios: { where: { ativo: true }, select: { id: true } },
+    },
+  });
+
+  if (!salao) throw new ErroNaoEncontrado("Salão não encontrado");
+
+  const requisitos: RequisitoDePublicacao[] = [
+    {
+      chave: "dados",
+      rotulo: "Nome e endereço preenchidos",
+      cumprido: salao.nome.trim().length > 0 && salao.endereco.trim().length > 0,
+      obrigatorio: true,
+      comoResolver: "Complete os dados do salão.",
+    },
+    {
+      chave: "servicos",
+      rotulo: "Ao menos um serviço cadastrado",
+      cumprido: salao._count.servicos > 0,
+      obrigatorio: true,
+      comoResolver: "Cadastre um serviço com duração.",
+    },
+    {
+      chave: "horarios",
+      rotulo: "Ao menos um dia de funcionamento ativo",
+      cumprido: salao.horarios.length > 0,
+      obrigatorio: true,
+      comoResolver: "Marque os dias em que o salão abre.",
+    },
+    {
+      chave: "localizacao",
+      rotulo: "Localização no mapa",
+      cumprido: coordenadaValida(salao.latitude, salao.longitude),
+      obrigatorio: false,
+      comoResolver: "Informe latitude e longitude nos dados do salão para aparecer no mapa.",
+    },
+  ];
+
+  return {
+    publicado: salao.publicado,
+    podePublicar: requisitos.every((requisito) => !requisito.obrigatorio || requisito.cumprido),
+    requisitos,
+  };
+}
+
+/**
+ * RF23 — publica ou despublica o salão.
+ *
+ * Despublicar nunca é barrado: o salão pode querer sair do ar justamente porque
+ * algo está incompleto ou errado. Só a entrada exige os requisitos.
+ */
+export async function definirPublicacao(salaoId: string, publicado: boolean): Promise<SituacaoDePublicacao> {
+  const situacao = await situacaoDePublicacao(salaoId);
+
+  if (publicado && !situacao.podePublicar) {
+    const pendentes = situacao.requisitos
+      .filter((requisito) => requisito.obrigatorio && !requisito.cumprido)
+      .map((requisito) => requisito.rotulo.toLowerCase());
+
+    throw new ErroDeConflito(`O salão ainda não pode ser publicado. Falta: ${pendentes.join("; ")}.`);
+  }
+
+  await prisma.salao.update({ where: { id: salaoId }, data: { publicado } });
+
+  return { ...situacao, publicado };
 }
 
 /** Existência do salão, para as rotas públicas (busca, disponibilidade). */

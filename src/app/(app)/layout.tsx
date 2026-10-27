@@ -12,7 +12,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="min-h-dvh bg-background">
-      <Cabecalho nome={sessao.user.nome} />
+      <Cabecalho nome={sessao.user.nome} papel={sessao.user.papel} />
       {children}
     </div>
   );

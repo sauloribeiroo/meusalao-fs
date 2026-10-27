@@ -1,6 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
-import { CLIENTE, SALOES } from "./dados-demo.mjs";
+import { ADMIN, CLIENTE, SALOES } from "./dados-demo.mjs";
 
 /**
  * Dados de demonstração para desenvolvimento.
@@ -26,6 +26,12 @@ async function main() {
     where: { email: CLIENTE.email },
     update: { nome: CLIENTE.nome, telefone: CLIENTE.telefone, senhaHash, papel: "CLIENTE" },
     create: { ...CLIENTE, senhaHash, papel: "CLIENTE" },
+  });
+
+  await prisma.usuario.upsert({
+    where: { email: ADMIN.email },
+    update: { nome: ADMIN.nome, senhaHash, papel: "ADMIN" },
+    create: { ...ADMIN, senhaHash, papel: "ADMIN" },
   });
 
   const criados = [];
@@ -54,6 +60,7 @@ async function main() {
 
   console.log("Seed concluído. Todas as contas usam a senha:", SENHA);
   console.log(`  Cliente: ${CLIENTE.email} (${cliente.nome})`);
+  console.log(`  Admin:   ${ADMIN.email}`);
   for (const salao of criados) {
     console.log(`  Salão:   ${salao.nome.padEnd(16)} ${salao.servicos} serviços — dono ${salao.email}`);
   }

@@ -5,6 +5,7 @@ import {
   CalendarCheck,
   CalendarClock,
   Hand,
+  LayoutDashboard,
   MapPin,
   MapPinned,
   Paintbrush,
@@ -101,6 +102,19 @@ export default async function InicioPage() {
               Meu salão
             </h2>
             <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <li>
+                <Link href="/salao/meu/painel" className="block">
+                  <Card className="transition-colors hover:border-primary">
+                    <CardContent className="flex items-center gap-3 p-5">
+                      <LayoutDashboard className="size-5 text-primary" aria-hidden />
+                      <div>
+                        <p className="font-medium">Painel</p>
+                        <p className="text-sm text-muted-foreground">Métricas e agenda do dia.</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              </li>
               <li>
                 <Link href="/salao/meu/agenda" className="block">
                   <Card className="transition-colors hover:border-primary">

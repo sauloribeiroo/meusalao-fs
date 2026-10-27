@@ -323,6 +323,11 @@ RGN06) e horários de segunda a sábado. Contas:
 |---|---|---|
 | Dono de salão | `dono@meusalao.dev` | `Senha123` |
 | Cliente | `cliente@meusalao.dev` | `Senha123` |
+| Administrador | `admin@meusalao.dev` | `Senha123` |
+
+A conta de administrador vem do seed porque não existe tela que promova alguém a
+`ADMIN` — só um `ADMIN` poderia usá-la. Sem ela, o painel de administração
+(RF26) ficaria inalcançável.
 
 ## Server Actions (sem rota REST)
 
@@ -335,13 +340,48 @@ Entregues na Sprint 3, em `src/acoes/`:
 | `agenda.ts` | `aplicarAcaoAction` (confirmar/recusar/concluir) | RF25 |
 | `servicos.ts`, `horarios.ts`, `agendamentos.ts` | telas da Sprint 2 | RF20, RF22, RF16 |
 
-Sobre a recuperação de senha: **não há provedor de e-mail configurado**. O
-`src/services/email.ts` escreve a mensagem no log do servidor, e o link aparece
-no terminal. Trocar por Resend ou SMTP é mexer só nessa função.
+Acrescentadas nas Sprints 4 e 5:
+
+| Arquivo | Ação | RF |
+|---|---|---|
+| `meus-agendamentos.ts` | `cancelarAgendamentoAction`, `avaliarAction` | RF18, RF19 |
+| `publicacao.ts` | `alternarPublicacaoAction` | RF23 |
+| `importacao.ts` | `analisarCsvAction`, `importarCsvAction` | RF21 |
+| `admin.ts` | `alterarPapelAction`, `moderarSalaoAction`, `removerComentarioAction` | RF26 |
+
+Sobre a recuperação de senha: o envio real usa o **Resend**, configurado por
+`RESEND_API_KEY`. Sem a chave, `src/services/email.ts` volta a escrever a
+mensagem no log do servidor, e o link aparece no terminal — o fluxo continua
+testável sem conta em serviço externo.
+
+## Rotas das Sprints 4 e 5
+
+| Rota | Método | Quem | RF |
+|---|---|---|---|
+| `/api/agendamentos/[id]` | `DELETE` | cliente que agendou | RF18 |
+| `/api/avaliacoes` | `GET` (público), `POST` (cliente) | — | RF19 |
+| `/api/saloes/publicacao` | `GET`, `PATCH` | dono | RF23 |
+| `/api/saloes/metricas` | `GET` | dono | RF24 |
+| `/api/servicos/importacao` | `POST` (`confirmar: false` pré-visualiza) | dono | RF21 |
+| `/api/admin/resumo` | `GET` | admin | RF26 |
+| `/api/admin/usuarios` | `GET`, `PATCH` | admin | RF26 |
+| `/api/admin/saloes` | `GET`, `PATCH` | admin | RF26 |
+| `/api/admin/avaliacoes` | `GET`, `DELETE` | admin | RF26 |
+
+Regras que valem a pena conhecer antes de chamar:
+
+- **RGN03** — avaliar só atendimento `CONCLUIDO`, uma vez por agendamento.
+  A segunda tentativa responde 409.
+- **RGN04** — o cliente cancela enquanto `PENDENTE` ou `CONFIRMADO`, e só antes
+  da hora marcada. Cancelar libera o horário na grade.
+- **RGN05** — publicar exige dados, ao menos um serviço e um dia de
+  funcionamento ativo. Despublicar nunca é barrado.
+- **Moderação** remove o comentário e preserva a nota: apagar a avaliação
+  distorceria a média e liberaria o cliente a avaliar de novo.
+- **Troca de papel** não deixa o administrador se rebaixar nem a plataforma
+  ficar sem nenhum. Rebaixar um dono tira os salões dele do ar.
 
 ## Ainda não implementado
 
 Cadastro de salão (#8), busca por nome e filtros avançados (#10), perfil público
-do salão (#14), seleção de serviço dedicada (#17), cancelamento pelo cliente
-(#24), avaliação (#26), importação CSV (#30), publicação do perfil (#34),
-métricas do dashboard (#36) e módulo administrativo (#40).
+do salão (#14) e seleção de serviço dedicada (#17).

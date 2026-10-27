@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CalendarCheck, CalendarClock, Scissors, Store } from "lucide-react";
+import { CalendarCheck, CalendarClock, LayoutDashboard, Scissors, Store } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const ABAS = [
+  { href: "/salao/meu/painel", rotulo: "Painel", Icone: LayoutDashboard },
   { href: "/salao/meu/agenda", rotulo: "Agenda", Icone: CalendarCheck },
   { href: "/salao/meu/dados", rotulo: "Dados", Icone: Store },
   { href: "/salao/meu/servicos", rotulo: "Serviços", Icone: Scissors },
