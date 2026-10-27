@@ -317,6 +317,53 @@ export async function aplicarAcaoDoSalao(
   return paraPublico(agendamento);
 }
 
+/**
+ * RGN04 — de onde o cliente pode cancelar.
+ *
+ * O PRD fala em "cancelar só enquanto confirmado", mas isso é anterior ao
+ * PENDENTE, que este projeto precisou acrescentar para o RF25 existir. Deixar
+ * um pedido pendente fora da regra prenderia o cliente: ele teria de esperar o
+ * salão confirmar só para então poder desistir.
+ */
+const STATUS_CANCELAVEIS: StatusAgendamento[] = ["PENDENTE", "CONFIRMADO"];
+
+/**
+ * RF18 — o cliente cancela o próprio agendamento.
+ *
+ * Agendamento de outro cliente responde como inexistente, e não como proibido:
+ * confirmar que o id existe já entregaria informação de quem não deveria vê-la.
+ *
+ * O registro não é apagado. Vira CANCELADO, que é o que libera o horário na
+ * restrição de sobreposição e preserva o histórico para o salão.
+ */
+export async function cancelarAgendamentoDoCliente(
+  clienteId: string,
+  agendamentoId: string,
+): Promise<AgendamentoPublico> {
+  const atual = await prisma.agendamento.findUnique({
+    where: { id: agendamentoId },
+    select: { id: true, clienteId: true, status: true, dataHora: true },
+  });
+
+  if (!atual || atual.clienteId !== clienteId) throw new ErroNaoEncontrado("Agendamento não encontrado");
+
+  if (!STATUS_CANCELAVEIS.includes(atual.status)) {
+    throw new ErroDeConflito(`Não é possível cancelar um agendamento ${DESCRICAO[atual.status]}`);
+  }
+
+  if (atual.dataHora.getTime() <= Date.now()) {
+    throw new ErroDeConflito("Não é possível cancelar um atendimento que já começou");
+  }
+
+  const agendamento = await prisma.agendamento.update({
+    where: { id: agendamentoId },
+    data: { status: "CANCELADO" },
+    include: INCLUSAO,
+  });
+
+  return paraPublico(agendamento);
+}
+
 /** Intervalo de instantes que cobre um dia local do salão. */
 function intervaloDoDia(data: string): { gte: Date; lt: Date } {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(data) || Number.isNaN(Date.parse(data))) {
