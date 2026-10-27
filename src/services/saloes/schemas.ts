@@ -66,3 +66,11 @@ export const edicaoSalaoSchema = z.object({
 });
 
 export type EdicaoSalao = z.infer<typeof edicaoSalaoSchema>;
+
+/**
+ * RF23 — alternar a publicação do salão. Booleano vindo de formulário chega
+ * como "true"/"false", então o schema aceita as duas formas.
+ */
+export const publicacaoSchema = z.object({
+  publicado: z.union([z.boolean(), z.enum(["true", "false"])]).transform((valor) => valor === true || valor === "true"),
+});
