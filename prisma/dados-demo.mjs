@@ -86,3 +86,14 @@ export const CLIENTE = {
   email: "cliente@meusalao.dev",
   telefone: "(85) 99999-0002",
 };
+
+/**
+ * Conta administrativa (RF26). Sem ela o painel de administração fica
+ * inalcançável: não há tela que promova alguém a ADMIN, justamente porque só um
+ * ADMIN poderia usá-la.
+ */
+export const ADMIN = {
+  nome: "Administração MeuSalão",
+  email: "admin@meusalao.dev",
+  telefone: null,
+};

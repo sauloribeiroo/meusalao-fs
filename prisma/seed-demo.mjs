@@ -1,6 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
-import { CLIENTE, SALOES } from "./dados-demo.mjs";
+import { ADMIN, CLIENTE, SALOES } from "./dados-demo.mjs";
 
 /**
  * Semeia dados de demonstração em um banco REMOTO (ex.: o Neon de produção),
@@ -54,6 +54,12 @@ async function main() {
     create: { ...CLIENTE, senhaHash, papel: "CLIENTE" },
   });
 
+  await prisma.usuario.upsert({
+    where: { email: ADMIN.email },
+    update: { senhaHash, papel: "ADMIN" },
+    create: { ...ADMIN, senhaHash, papel: "ADMIN" },
+  });
+
   const resumo = [];
 
   for (const { dono, salao: dados, servicos, horarios } of SALOES) {
@@ -104,6 +110,7 @@ async function main() {
     console.log(`  ${salao.nome.padEnd(16)} ${salao.total} serviços (${salao.criados} criados agora) — dono ${salao.email}`);
   }
   console.log(`  Cliente: ${CLIENTE.email}`);
+  console.log(`  Admin:   ${ADMIN.email}`);
   console.log("  Todas as contas usam a senha informada em SENHA_DEMO.");
 }
 
