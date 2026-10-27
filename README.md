@@ -95,6 +95,8 @@ Localmente, `DIRECT_URL` recebe a mesma URL de `DATABASE_URL`. As duas só difer
 
 O login com Google é opcional: sem `AUTH_GOOGLE_ID`/`AUTH_GOOGLE_SECRET` no `.env`, o botão simplesmente não aparece e o login por e-mail/senha continua funcionando.
 
+O envio de e-mail também é opcional: sem `RESEND_API_KEY`, a mensagem de recuperação de senha é escrita no log do servidor, com o link completo — o fluxo continua testável de ponta a ponta sem conta em serviço externo. Com a chave configurada, o e-mail é enviado de verdade e o aviso de modo de desenvolvimento some da tela.
+
 Para ter dados com que trabalhar (salão, serviços e horários de demonstração), rode `npm run db:seed` — ele imprime as contas de teste criadas.
 
 ### Demonstração no ambiente publicado
@@ -123,6 +125,7 @@ O deploy é contínuo na Vercel: cada push na `main` gera uma nova versão.
 2. Importe o repositório na Vercel. O framework é detectado automaticamente.
 3. Configure as variáveis de ambiente no projeto da Vercel: `DATABASE_URL`, `DIRECT_URL` e `AUTH_SECRET` (gere um novo, diferente do local).
 4. Para o login com Google em produção, cadastre a URI de redirecionamento no Google Cloud Console — neste projeto, `https://meusalao-fs.vercel.app/api/auth/callback/google` — e configure `AUTH_GOOGLE_ID` e `AUTH_GOOGLE_SECRET`.
+5. Para enviar e-mail de verdade, configure `RESEND_API_KEY` (e `EMAIL_REMETENTE`, se houver domínio verificado). Sem elas o deploy funciona, e a mensagem fica no log de execução da Vercel.
 
 As migrações rodam sozinhas: o script de `build` executa `prisma migrate deploy` antes de compilar, então o schema do banco acompanha cada deploy.
 
