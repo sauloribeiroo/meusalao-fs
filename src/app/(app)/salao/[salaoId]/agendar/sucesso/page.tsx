@@ -73,8 +73,8 @@ export default async function SucessoPage({ params, searchParams }: Props) {
       </Card>
 
       <div className="flex flex-col gap-2 sm:flex-row">
-        <Link href="/inicio" className={buttonVariants({ className: "flex-1" })}>
-          Voltar ao início
+        <Link href="/agendamentos" className={buttonVariants({ className: "flex-1" })}>
+          Ver meus agendamentos
         </Link>
         <Link
           href={`/salao/${salaoId}/agendar`}

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { LogOut, Scissors, UserRound } from "lucide-react";
+import { CalendarDays, LogOut, Scissors, UserRound } from "lucide-react";
 import { sairAction } from "@/acoes/sessao";
 import { Button, buttonVariants } from "@/components/ui/button";
 
@@ -13,6 +13,14 @@ export function Cabecalho({ nome }: { nome: string }) {
         </Link>
 
         <div className="flex items-center gap-1">
+          <Link
+            href="/agendamentos"
+            className={buttonVariants({ variant: "ghost", size: "sm" })}
+            aria-label="Meus agendamentos"
+          >
+            <CalendarDays aria-hidden />
+            <span className="hidden sm:inline">Agendamentos</span>
+          </Link>
           <Link
             href="/perfil"
             className={buttonVariants({ variant: "ghost", size: "sm" })}
