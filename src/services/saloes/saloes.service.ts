@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { ErroDeAutorizacao, ErroDeConflito, ErroDeValidacao, ErroNaoEncontrado } from "@/services/erros";
 import { coordenadaValida, distanciaEmKm, type Coordenada } from "@/services/saloes/distancia";
-import { edicaoSalaoSchema } from "@/services/saloes/schemas";
+import { edicaoSalaoSchema, novoSalaoSchema } from "@/services/saloes/schemas";
 
 /**
  * Resolução do salão em que o dono autenticado está trabalhando.
@@ -50,6 +50,60 @@ export async function exigirSalaoDoUsuario(
   }
 
   return { id: salao.id, nome: salao.nome };
+}
+
+/**
+ * RF03 — cria o salão e promove quem criou a dono.
+ *
+ * As duas coisas numa transação: um salão sem dono com o papel certo deixaria
+ * a pessoa sem acesso às telas de gestão do que ela acabou de criar, e um papel
+ * promovido sem salão daria uma área de gestão vazia. Ou acontece tudo, ou nada.
+ *
+ * Nasce despublicado de propósito (RGN05): serviços e horários ainda não
+ * existem, e um salão sem eles na busca só frustaria quem tentasse agendar.
+ *
+ * O MVP assume um salão por dono — ver o comentário no topo deste arquivo.
+ */
+export async function criarSalao(usuarioId: string, dados: unknown): Promise<SalaoEditavel> {
+  const resultado = novoSalaoSchema.safeParse(dados);
+  if (!resultado.success) {
+    throw new ErroDeValidacao(resultado.error.flatten().fieldErrors as Record<string, string[]>);
+  }
+
+  const existente = await salaoDoDono(usuarioId);
+  if (existente) {
+    throw new ErroDeConflito("Você já tem um salão cadastrado. Edite-o em Meu salão.");
+  }
+
+  const { nome, endereco, descricao, tipo, telefone, latitude, longitude } = resultado.data;
+
+  const salao = await prisma.$transaction(async (tx) => {
+    const criado = await tx.salao.create({
+      data: {
+        donoId: usuarioId,
+        nome,
+        endereco,
+        descricao: descricao ?? null,
+        tipo: tipo ?? null,
+        telefone: telefone ?? null,
+        latitude: latitude ?? null,
+        longitude: longitude ?? null,
+        publicado: false,
+      },
+      select: { id: true },
+    });
+
+    // O administrador que cria um salão continua administrador: rebaixá-lo a
+    // dono tiraria o acesso ao painel da plataforma.
+    await tx.usuario.updateMany({
+      where: { id: usuarioId, papel: "CLIENTE" },
+      data: { papel: "DONO_SALAO" },
+    });
+
+    return criado;
+  });
+
+  return buscarSalaoEditavel(salao.id);
 }
 
 /** Dados do salão como a tela de edição precisa deles. */

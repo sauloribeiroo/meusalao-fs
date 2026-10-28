@@ -13,6 +13,7 @@ import {
   Search,
   Sparkles,
   SprayCan,
+  Store,
 } from "lucide-react";
 import { auth } from "@/auth";
 import { buttonVariants } from "@/components/ui/button";
@@ -155,6 +156,28 @@ export default async function InicioPage() {
                 </Link>
               </li>
             </ul>
+          </section>
+        )}
+
+        {!ehDono && (
+          <section aria-labelledby="tem-salao" className="mt-10">
+            <h2 id="tem-salao" className="sr-only">
+              Tem um salão?
+            </h2>
+            <Card>
+              <CardContent className="flex flex-wrap items-center justify-between gap-4 p-5">
+                <div className="min-w-0">
+                  <p className="font-medium">Você tem um salão?</p>
+                  <p className="mt-0.5 text-sm text-muted-foreground">
+                    Cadastre o seu e comece a receber agendamentos pelo MeuSalão.
+                  </p>
+                </div>
+                <Link href="/salao/novo" className={buttonVariants({ size: "sm" })}>
+                  <Store aria-hidden />
+                  Cadastrar salão
+                </Link>
+              </CardContent>
+            </Card>
           </section>
         )}
 

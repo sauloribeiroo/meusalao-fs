@@ -68,6 +68,23 @@ export const edicaoSalaoSchema = z.object({
 export type EdicaoSalao = z.infer<typeof edicaoSalaoSchema>;
 
 /**
+ * RF03 — criação do salão. Os campos são os mesmos da edição: o que muda é o
+ * efeito (nasce despublicado e promove quem criou a dono), não a validação.
+ */
+export const novoSalaoSchema = edicaoSalaoSchema;
+
+export type NovoSalao = z.infer<typeof novoSalaoSchema>;
+
+/** Busca de endereço para o mapa (RF03). */
+export const buscaDeEnderecoSchema = z.object({
+  endereco: z
+    .string()
+    .trim()
+    .min(5, "Digite um endereço com ao menos 5 caracteres")
+    .max(200, "O endereço deve ter no máximo 200 caracteres"),
+});
+
+/**
  * RF23 — alternar a publicação do salão. Booleano vindo de formulário chega
  * como "true"/"false", então o schema aceita as duas formas.
  */
