@@ -383,5 +383,27 @@ Regras que valem a pena conhecer antes de chamar:
 
 ## Ainda não implementado
 
-Cadastro de salão (#8), busca por nome e filtros avançados (#10), perfil público
-do salão (#14) e seleção de serviço dedicada (#17).
+Todo o escopo funcional previsto (RF01–RF26) está entregue.
+
+## Rotas do backlog (RF03, RF09, RF10, RF14, RF15)
+
+| Rota | Método | Quem | RF |
+|---|---|---|---|
+| `/api/saloes?termo=` | `GET` | público | RF09 |
+| `/api/saloes?tipo=&precoMax=&notaMin=&distanciaMax=&ordenar=` | `GET` | público | RF10 |
+
+O cadastro de salão (RF03) e a busca de endereço não têm rota REST: são Server
+Actions em `src/acoes/cadastro-salao.ts`. A busca de endereço precisa ficar no
+servidor porque o Nominatim exige um `User-Agent` que identifique a aplicação,
+e esse cabeçalho não se envia do navegador.
+
+Sobre a busca por texto (RF09): ela casa com o nome do salão **ou** com o nome
+de um serviço dele, ignorando acento e caixa — "marcia" encontra "Salão da
+Márcia". A comparação é feita na aplicação, e não no banco, porque o
+`mode: "insensitive"` do Postgres resolve caixa mas não acento.
+
+Sobre a geocodificação: é melhor esforço. O OpenStreetMap raramente conhece o
+número da casa no Brasil, então a consulta é tentada em até três formas — termo
+completo, sem o número e sem o prefixo do logradouro. Não encontrar não impede
+o cadastro: o salão existe e recebe agendamentos, só fica fora do mapa e da
+ordenação por proximidade até alguém informar as coordenadas.

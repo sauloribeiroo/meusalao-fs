@@ -1,7 +1,8 @@
+import type { DiaSemana } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { ErroDeAutorizacao, ErroDeConflito, ErroDeValidacao, ErroNaoEncontrado } from "@/services/erros";
 import { coordenadaValida, distanciaEmKm, type Coordenada } from "@/services/saloes/distancia";
-import { edicaoSalaoSchema } from "@/services/saloes/schemas";
+import { edicaoSalaoSchema, novoSalaoSchema } from "@/services/saloes/schemas";
 
 /**
  * Resolução do salão em que o dono autenticado está trabalhando.
@@ -50,6 +51,60 @@ export async function exigirSalaoDoUsuario(
   }
 
   return { id: salao.id, nome: salao.nome };
+}
+
+/**
+ * RF03 — cria o salão e promove quem criou a dono.
+ *
+ * As duas coisas numa transação: um salão sem dono com o papel certo deixaria
+ * a pessoa sem acesso às telas de gestão do que ela acabou de criar, e um papel
+ * promovido sem salão daria uma área de gestão vazia. Ou acontece tudo, ou nada.
+ *
+ * Nasce despublicado de propósito (RGN05): serviços e horários ainda não
+ * existem, e um salão sem eles na busca só frustaria quem tentasse agendar.
+ *
+ * O MVP assume um salão por dono — ver o comentário no topo deste arquivo.
+ */
+export async function criarSalao(usuarioId: string, dados: unknown): Promise<SalaoEditavel> {
+  const resultado = novoSalaoSchema.safeParse(dados);
+  if (!resultado.success) {
+    throw new ErroDeValidacao(resultado.error.flatten().fieldErrors as Record<string, string[]>);
+  }
+
+  const existente = await salaoDoDono(usuarioId);
+  if (existente) {
+    throw new ErroDeConflito("Você já tem um salão cadastrado. Edite-o em Meu salão.");
+  }
+
+  const { nome, endereco, descricao, tipo, telefone, latitude, longitude } = resultado.data;
+
+  const salao = await prisma.$transaction(async (tx) => {
+    const criado = await tx.salao.create({
+      data: {
+        donoId: usuarioId,
+        nome,
+        endereco,
+        descricao: descricao ?? null,
+        tipo: tipo ?? null,
+        telefone: telefone ?? null,
+        latitude: latitude ?? null,
+        longitude: longitude ?? null,
+        publicado: false,
+      },
+      select: { id: true },
+    });
+
+    // O administrador que cria um salão continua administrador: rebaixá-lo a
+    // dono tiraria o acesso ao painel da plataforma.
+    await tx.usuario.updateMany({
+      where: { id: usuarioId, papel: "CLIENTE" },
+      data: { papel: "DONO_SALAO" },
+    });
+
+    return criado;
+  });
+
+  return buscarSalaoEditavel(salao.id);
 }
 
 /** Dados do salão como a tela de edição precisa deles. */
@@ -129,19 +184,64 @@ export type SalaoNaLista = {
   /** Menor preço entre os serviços; null exibe "Consultar preço" (RGN06). */
   precoMinimo: number | null;
   totalServicos: number;
+  /** Null enquanto o salão não tiver avaliações (RF19). */
+  notaMedia: number | null;
+  totalAvaliacoes: number;
 };
 
+/** RF09 e RF10 — o que a busca aceita. Todo campo é opcional. */
+export type FiltrosDeBusca = {
+  /** Casa com o nome do salão OU o nome de um serviço dele (RF09). */
+  termo?: string;
+  tipo?: string;
+  precoMaximo?: number;
+  notaMinima?: number;
+  distanciaMaximaKm?: number;
+  ordenacao?: Ordenacao;
+};
+
+export const ORDENACOES = ["proximidade", "nome", "preco", "nota"] as const;
+export type Ordenacao = (typeof ORDENACOES)[number];
+
 /**
- * RF11 — salões publicados, ordenados por proximidade quando há localização.
+ * Texto comparável: sem acento e em minúsculas.
+ *
+ * O `mode: "insensitive"` do Prisma resolve maiúsculas, mas não acento — e
+ * ninguém digita "Salão da Márcia" com acento numa busca. Comparar assim é o
+ * que faz "marcia" encontrar "Márcia".
+ */
+const semAcento = (texto: string) =>
+  texto
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .trim()
+    .toLowerCase();
+
+/**
+ * RF11, RF09 e RF10 — salões publicados, com busca, filtros e ordenação.
  *
  * Sem a permissão de geolocalização, a lista continua funcionando, ordenada por
  * nome — é a degradação graciosa que o RNF08 pede. Salão sem coordenadas nunca
- * é descartado: entra depois dos que têm distância conhecida.
+ * é descartado por ausência de distância: entra depois dos que têm.
+ *
+ * Nome e tipo são filtrados no banco; preço, nota e distância ficam em memória,
+ * porque os três dependem de agregações já carregadas aqui (menor preço entre os
+ * serviços, média das avaliações, Haversine). Para o porte deste catálogo isso
+ * vale mais que a complexidade de empurrar tudo para SQL — se um dia a lista
+ * crescer, o lugar de mudar é este.
  */
-export async function listarSaloesPublicados(origem?: Coordenada | null): Promise<SalaoNaLista[]> {
+export async function listarSaloesPublicados(
+  origem?: Coordenada | null,
+  filtros: FiltrosDeBusca = {},
+): Promise<SalaoNaLista[]> {
+  const termo = filtros.termo?.trim();
+
   // RGN05: só salão publicado aparece na busca e no mapa.
   const saloes = await prisma.salao.findMany({
-    where: { publicado: true },
+    where: {
+      publicado: true,
+      ...(filtros.tipo ? { tipo: { equals: filtros.tipo, mode: "insensitive" as const } } : {}),
+    },
     select: {
       id: true,
       nome: true,
@@ -149,14 +249,28 @@ export async function listarSaloesPublicados(origem?: Coordenada | null): Promis
       tipo: true,
       latitude: true,
       longitude: true,
-      servicos: { select: { preco: true } },
+      servicos: { select: { nome: true, preco: true } },
+      avaliacoes: { select: { nota: true } },
     },
   });
 
-  const lista = saloes.map((salao) => {
+  // RF09: procurar "corte" acha tanto a "Barbearia Corte Fino" quanto o salão
+  // que oferece o serviço "Corte masculino".
+  const encontrados = termo
+    ? saloes.filter((salao) => {
+        const alvo = semAcento(termo);
+        return (
+          semAcento(salao.nome).includes(alvo) ||
+          salao.servicos.some((servico) => semAcento(servico.nome).includes(alvo))
+        );
+      })
+    : saloes;
+
+  const lista = encontrados.map((salao) => {
     const precos = salao.servicos
       .map((servico) => (servico.preco === null ? null : Number(servico.preco)))
       .filter((preco): preco is number => preco !== null);
+    const notas = salao.avaliacoes.map((avaliacao) => avaliacao.nota);
 
     return {
       id: salao.id,
@@ -171,17 +285,164 @@ export async function listarSaloesPublicados(origem?: Coordenada | null): Promis
           : null,
       precoMinimo: precos.length ? Math.min(...precos) : null,
       totalServicos: salao.servicos.length,
+      notaMedia: notas.length ? notas.reduce((a, b) => a + b, 0) / notas.length : null,
+      totalAvaliacoes: notas.length,
     };
   });
 
-  return lista.sort((a, b) => {
+  return ordenar(lista.filter((salao) => passaNosFiltros(salao, filtros)), filtros, origem);
+}
+
+/**
+ * Preço e nota desconhecidos **não** eliminam o salão: um salão sem preço
+ * cadastrado exibe "Consultar preço" (RGN06), e descartá-lo num filtro de preço
+ * máximo esconderia justamente quem pode ser mais barato. O mesmo vale para
+ * quem ainda não tem avaliação. Distância é diferente: sem coordenada não há
+ * como afirmar que o salão está dentro do raio pedido.
+ */
+function passaNosFiltros(salao: SalaoNaLista, filtros: FiltrosDeBusca): boolean {
+  if (filtros.precoMaximo !== undefined && salao.precoMinimo !== null) {
+    if (salao.precoMinimo > filtros.precoMaximo) return false;
+  }
+
+  if (filtros.notaMinima !== undefined && salao.notaMedia !== null) {
+    if (salao.notaMedia < filtros.notaMinima) return false;
+  }
+
+  if (filtros.distanciaMaximaKm !== undefined) {
+    if (salao.distanciaKm === null || salao.distanciaKm > filtros.distanciaMaximaKm) return false;
+  }
+
+  return true;
+}
+
+function ordenar(
+  lista: SalaoNaLista[],
+  filtros: FiltrosDeBusca,
+  origem?: Coordenada | null,
+): SalaoNaLista[] {
+  // Sem localização, ordenar por proximidade não significa nada: cai em nome.
+  const criterio = filtros.ordenacao ?? "proximidade";
+  const efetivo = criterio === "proximidade" && !origem ? "nome" : criterio;
+
+  const porNome = (a: SalaoNaLista, b: SalaoNaLista) => a.nome.localeCompare(b.nome, "pt-BR");
+
+  return [...lista].sort((a, b) => {
+    if (efetivo === "nome") return porNome(a, b);
+
+    if (efetivo === "preco") {
+      // Quem não tem preço cadastrado vai para o fim, não para o começo.
+      if (a.precoMinimo === null && b.precoMinimo === null) return porNome(a, b);
+      if (a.precoMinimo === null) return 1;
+      if (b.precoMinimo === null) return -1;
+      return a.precoMinimo - b.precoMinimo || porNome(a, b);
+    }
+
+    if (efetivo === "nota") {
+      if (a.notaMedia === null && b.notaMedia === null) return porNome(a, b);
+      if (a.notaMedia === null) return 1;
+      if (b.notaMedia === null) return -1;
+      return b.notaMedia - a.notaMedia || porNome(a, b);
+    }
+
     if (a.distanciaKm !== null && b.distanciaKm !== null) return a.distanciaKm - b.distanciaKm;
-    // Quem tem distância conhecida vem antes de quem não tem.
     if (a.distanciaKm !== null) return -1;
     if (b.distanciaKm !== null) return 1;
 
-    return a.nome.localeCompare(b.nome, "pt-BR");
+    return porNome(a, b);
   });
+}
+
+/** Tipos de salão já cadastrados, para o filtro oferecer só o que existe. */
+export async function tiposDeSalao(): Promise<string[]> {
+  const tipos = await prisma.salao.findMany({
+    where: { publicado: true, tipo: { not: null } },
+    select: { tipo: true },
+    distinct: ["tipo"],
+    orderBy: { tipo: "asc" },
+  });
+
+  return tipos.map((salao) => salao.tipo!).filter(Boolean);
+}
+
+export type PerfilPublico = {
+  id: string;
+  nome: string;
+  descricao: string | null;
+  endereco: string;
+  telefone: string | null;
+  tipo: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  distanciaKm: number | null;
+  notaMedia: number | null;
+  totalAvaliacoes: number;
+  servicos: { id: string; nome: string; preco: number | null; duracaoMin: number }[];
+  horarios: { diaSemana: DiaSemana; horaAbertura: string; horaFechamento: string }[];
+};
+
+/**
+ * RF14 — perfil público do salão.
+ *
+ * Só devolve salão publicado (RGN05); fora isso responde como inexistente, em
+ * vez de "não publicado", para a URL não confirmar que o salão existe antes de
+ * o dono decidir publicá-lo.
+ *
+ * `donoId` não entra no retorno: a tela não precisa, e o que não sai daqui não
+ * vaza na serialização do Server Component.
+ */
+export async function buscarPerfilPublico(salaoId: string, origem?: Coordenada | null): Promise<PerfilPublico> {
+  const salao = await prisma.salao.findUnique({
+    where: { id: salaoId },
+    select: {
+      id: true,
+      nome: true,
+      descricao: true,
+      endereco: true,
+      telefone: true,
+      tipo: true,
+      latitude: true,
+      longitude: true,
+      publicado: true,
+      servicos: {
+        select: { id: true, nome: true, preco: true, duracaoMin: true },
+        orderBy: { criadoEm: "asc" },
+      },
+      horarios: {
+        where: { ativo: true },
+        select: { diaSemana: true, horaAbertura: true, horaFechamento: true },
+      },
+      avaliacoes: { select: { nota: true } },
+    },
+  });
+
+  if (!salao || !salao.publicado) throw new ErroNaoEncontrado("Salão não encontrado");
+
+  const notas = salao.avaliacoes.map((avaliacao) => avaliacao.nota);
+
+  return {
+    id: salao.id,
+    nome: salao.nome,
+    descricao: salao.descricao,
+    endereco: salao.endereco,
+    telefone: salao.telefone,
+    tipo: salao.tipo,
+    latitude: salao.latitude,
+    longitude: salao.longitude,
+    distanciaKm:
+      origem && coordenadaValida(salao.latitude, salao.longitude)
+        ? distanciaEmKm(origem, { latitude: salao.latitude!, longitude: salao.longitude! })
+        : null,
+    notaMedia: notas.length ? notas.reduce((a, b) => a + b, 0) / notas.length : null,
+    totalAvaliacoes: notas.length,
+    servicos: salao.servicos.map((servico) => ({
+      id: servico.id,
+      nome: servico.nome,
+      preco: servico.preco === null ? null : Number(servico.preco),
+      duracaoMin: servico.duracaoMin,
+    })),
+    horarios: salao.horarios,
+  };
 }
 
 export type SalaoComparado = {

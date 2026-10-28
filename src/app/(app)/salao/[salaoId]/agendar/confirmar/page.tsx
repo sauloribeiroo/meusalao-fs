@@ -77,7 +77,7 @@ export default async function ConfirmarPage({ params, searchParams }: Props) {
         <BotaoConfirmar salaoId={salaoId} servicoId={servicoId} dataHora={dataHora} />
 
         <Link
-          href={`/salao/${salaoId}/agendar?servicoId=${servicoId}`}
+          href={`/salao/${salaoId}/agendar/horario?servicoId=${servicoId}`}
           className={buttonVariants({ variant: "ghost", className: "w-full" })}
         >
           Escolher outro horário

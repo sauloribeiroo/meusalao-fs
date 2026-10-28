@@ -1,18 +1,30 @@
 import type { Metadata } from "next";
 import { ExploradorDeSaloes } from "@/app/(app)/saloes/explorador";
-import { listarSaloesPublicados } from "@/services/saloes/saloes.service";
+import { listarSaloesPublicados, tiposDeSalao } from "@/services/saloes/saloes.service";
 
 export const metadata: Metadata = { title: "Salões | MeuSalão" };
 
 /**
- * RF11 — salões em lista ou no mapa.
+ * RF09, RF10 e RF11 — salões em lista ou no mapa, com busca e filtros.
  *
  * A primeira carga vem do servidor, sem localização: a tela já aparece cheia e,
  * se o usuário conceder a permissão, o cliente refaz a busca ordenada por
  * proximidade. Negar a permissão não tira nada da tela (RNF08).
+ *
+ * `termo` na URL já chega aplicado, para a busca do início levar direto ao
+ * resultado — e para o link do resultado poder ser compartilhado.
  */
-export default async function SaloesPage() {
-  const saloes = await listarSaloesPublicados(null);
+export default async function SaloesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ termo?: string }>;
+}) {
+  const { termo } = await searchParams;
+
+  const [saloes, tipos] = await Promise.all([
+    listarSaloesPublicados(null, { termo }),
+    tiposDeSalao(),
+  ]);
 
   return (
     <>
@@ -26,7 +38,7 @@ export default async function SaloesPage() {
       </header>
 
       <main className="mx-auto max-w-7xl px-6 py-8">
-        <ExploradorDeSaloes iniciais={saloes} />
+        <ExploradorDeSaloes iniciais={saloes} tipos={tipos} termoInicial={termo} />
       </main>
     </>
   );
