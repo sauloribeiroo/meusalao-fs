@@ -23,7 +23,7 @@ import { prisma } from "@/lib/prisma";
 
 export const metadata: Metadata = { title: "Início | MeuSalão" };
 
-// Sprint 2+: as categorias virão do banco, junto com a busca de salões.
+// As categorias são buscas prontas: cada uma leva a /saloes com o termo.
 const CATEGORIAS = [
   { nome: "Corte", Icone: Scissors },
   { nome: "Coloração", Icone: Paintbrush },
@@ -57,8 +57,9 @@ export default async function InicioPage() {
             Encontre o salão perfeito perto de você
           </h1>
 
-          {/* Sprint 2: este campo passa a buscar salões por nome e serviço. */}
-          <div className="mt-8 max-w-xl">
+          {/* RF09 — busca por GET: o termo vai na URL de /saloes, então o
+              resultado é compartilhável e não exige estado no cliente. */}
+          <form action="/saloes" className="mt-8 max-w-xl">
             <div className="relative">
               <Search
                 className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
@@ -66,17 +67,19 @@ export default async function InicioPage() {
               />
               <Input
                 type="search"
+                name="termo"
                 placeholder="Buscar salão ou serviço"
                 aria-label="Buscar salão ou serviço"
-                aria-describedby="busca-indisponivel"
-                className="h-12 border-transparent bg-card pl-9 disabled:cursor-not-allowed disabled:opacity-100"
-                disabled
+                className="h-12 border-transparent bg-card pl-9 pr-24"
               />
+              <button
+                type="submit"
+                className="absolute right-1.5 top-1/2 h-9 -translate-y-1/2 rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
+              >
+                Buscar
+              </button>
             </div>
-            <p id="busca-indisponivel" className="mt-2 text-sm text-white/70">
-              A busca por salões chega na próxima entrega.
-            </p>
-          </div>
+          </form>
         </div>
       </header>
 
@@ -88,10 +91,13 @@ export default async function InicioPage() {
           <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
             {CATEGORIAS.map(({ nome, Icone }) => (
               <li key={nome}>
-                <Card className="p-4 text-center">
-                  <Icone className="mx-auto mb-2 size-5 text-primary" aria-hidden />
-                  <span className="text-sm font-medium">{nome}</span>
-                </Card>
+                {/* Cada categoria é uma busca pronta pelo nome do serviço. */}
+                <Link href={`/saloes?termo=${encodeURIComponent(nome)}`} className="block">
+                  <Card className="p-4 text-center transition-colors hover:border-primary">
+                    <Icone className="mx-auto mb-2 size-5 text-primary" aria-hidden />
+                    <span className="text-sm font-medium">{nome}</span>
+                  </Card>
+                </Link>
               </li>
             ))}
           </ul>

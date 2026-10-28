@@ -4,12 +4,17 @@ import { useCallback, useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { List, Loader2, MapPin, MapPinned, Navigation, Scale } from "lucide-react";
+import { Filtros } from "@/app/(app)/saloes/filtros";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { precoEmReais } from "@/lib/formato";
 import { cn } from "@/lib/utils";
 import { distanciaLegivel } from "@/services/saloes/distancia";
-import { MAXIMO_COMPARACAO, type SalaoNaLista } from "@/services/saloes/saloes.service";
+import {
+  MAXIMO_COMPARACAO,
+  type FiltrosDeBusca,
+  type SalaoNaLista,
+} from "@/services/saloes/saloes.service";
 
 // O Leaflet precisa de `window`, então o componente não pode ser renderizado
 // no servidor.
@@ -25,13 +30,23 @@ const MapaSaloes = dynamic(() => import("@/components/mapa-saloes").then((m) => 
 type Origem = { latitude: number; longitude: number };
 type Localizacao = "inicial" | "pedindo" | "concedida" | "negada" | "indisponivel";
 
-/** RF11 — lista e mapa dos salões, com ordenação por proximidade. */
-export function ExploradorDeSaloes({ iniciais }: { iniciais: SalaoNaLista[] }) {
+/** RF09, RF10 e RF11 — busca, filtros, lista e mapa dos salões. */
+export function ExploradorDeSaloes({
+  iniciais,
+  tipos,
+  termoInicial,
+}: {
+  iniciais: SalaoNaLista[];
+  tipos: string[];
+  termoInicial?: string;
+}) {
   const [saloes, setSaloes] = useState(iniciais);
   const [origem, setOrigem] = useState<Origem | null>(null);
   const [localizacao, setLocalizacao] = useState<Localizacao>("inicial");
   const [visao, setVisao] = useState<"lista" | "mapa">("lista");
   const [selecionados, setSelecionados] = useState<string[]>([]);
+  const [filtros, setFiltros] = useState<FiltrosDeBusca>(termoInicial ? { termo: termoInicial } : {});
+  const [carregando, setCarregando] = useState(false);
 
   /** RF13 — no máximo três salões por comparação, para a tabela caber na tela. */
   const alternarSelecao = (id: string) =>
@@ -45,14 +60,53 @@ export function ExploradorDeSaloes({ iniciais }: { iniciais: SalaoNaLista[] }) {
 
   const comCoordenadas = saloes.filter((salao) => salao.latitude !== null && salao.longitude !== null);
 
-  const buscarComOrigem = useCallback(async (ponto: Origem) => {
-    const busca = new URLSearchParams({ lat: String(ponto.latitude), lng: String(ponto.longitude) });
-    const resposta = await fetch(`/api/saloes?${busca}`);
-    if (!resposta.ok) return;
+  /**
+   * Refaz a busca no servidor. Filtros e ordenação vivem lá, e não aqui, porque
+   * o que a tela tem em mãos é só a página já filtrada — filtrar de novo no
+   * cliente esconderia salões que o filtro anterior tinha deixado de fora.
+   */
+  const buscar = useCallback(async (ponto: Origem | null, criterios: FiltrosDeBusca) => {
+    const busca = new URLSearchParams();
+    if (ponto) {
+      busca.set("lat", String(ponto.latitude));
+      busca.set("lng", String(ponto.longitude));
+    }
+    if (criterios.termo?.trim()) busca.set("termo", criterios.termo.trim());
+    if (criterios.tipo) busca.set("tipo", criterios.tipo);
+    if (criterios.precoMaximo !== undefined) busca.set("precoMax", String(criterios.precoMaximo));
+    if (criterios.notaMinima !== undefined) busca.set("notaMin", String(criterios.notaMinima));
+    if (criterios.distanciaMaximaKm !== undefined) {
+      busca.set("distanciaMax", String(criterios.distanciaMaximaKm));
+    }
+    if (criterios.ordenacao) busca.set("ordenar", criterios.ordenacao);
 
-    const corpo = await resposta.json();
-    setSaloes(corpo.saloes);
+    setCarregando(true);
+    try {
+      const resposta = await fetch(`/api/saloes?${busca}`);
+      if (!resposta.ok) return;
+
+      const corpo = await resposta.json();
+      setSaloes(corpo.saloes);
+    } finally {
+      setCarregando(false);
+    }
   }, []);
+
+  const buscarComOrigem = useCallback(
+    (ponto: Origem) => buscar(ponto, filtros),
+    [buscar, filtros],
+  );
+
+  const aplicarFiltros = useCallback(
+    (novos: FiltrosDeBusca) => {
+      setFiltros(novos);
+      // Seleção de comparação some junto: os ids escolhidos podem não estar mais
+      // na lista depois do filtro, e comparar o que não se vê confunde.
+      setSelecionados([]);
+      void buscar(origem, novos);
+    },
+    [buscar, origem],
+  );
 
   const pedirLocalizacao = useCallback(() => {
     if (!("geolocation" in navigator)) {
@@ -84,6 +138,14 @@ export function ExploradorDeSaloes({ iniciais }: { iniciais: SalaoNaLista[] }) {
 
   return (
     <div className="space-y-5">
+      <Filtros
+        valores={filtros}
+        aoAplicar={aplicarFiltros}
+        temLocalizacao={origem !== null}
+        tipos={tipos}
+        carregando={carregando}
+      />
+
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex rounded-lg border border-border p-0.5" role="group" aria-label="Forma de visualização">
           {(["lista", "mapa"] as const).map((modo) => (
