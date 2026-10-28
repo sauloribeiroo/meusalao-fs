@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+
 import { atualizarSessao, auth } from "@/auth";
 import { ErroDeNegocio, ErroDeValidacao } from "@/services/erros";
 import { buscarCoordenadas, type LocalEncontrado } from "@/services/saloes/geocodificacao";
@@ -14,6 +15,8 @@ export type EstadoCadastroSalao = {
   mensagem?: string;
   erros?: Record<string, string[]>;
   valores?: Record<string, string>;
+  /** Instante da criação. A tela navega quando ele muda. */
+  criadoEm?: number;
 };
 
 export type EstadoBuscaEndereco = {
@@ -79,5 +82,10 @@ export async function criarSalaoAction(
 
   revalidatePath("/salao/meu/dados");
   revalidatePath("/inicio");
-  redirect("/salao/meu/dados?criado=1");
+
+  // Sem `redirect` aqui, de propósito: ele interrompe a ação lançando, e o
+  // `Set-Cookie` da sessão recém-atualizada se perde junto — o JWT continuaria
+  // dizendo CLIENTE e a área do dono recusaria quem acabou de criar o salão.
+  // Retornando normalmente, o cookie vai na resposta e a tela navega depois.
+  return { criadoEm: Date.now() };
 }

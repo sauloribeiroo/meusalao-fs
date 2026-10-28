@@ -42,6 +42,42 @@ export async function buscarCoordenadas(endereco: string, limite = 5): Promise<L
   const termo = endereco.trim();
   if (termo.length < 5) return [];
 
+  for (const [indice, tentativa] of variacoes(termo).entries()) {
+    // A política do Nominatim pede no máximo uma consulta por segundo.
+    if (indice > 0) await new Promise((resolver) => setTimeout(resolver, 1100));
+
+    const encontrados = await consultar(tentativa, limite);
+    if (encontrados.length > 0) return encontrados;
+  }
+
+  return [];
+}
+
+/** Tipos de logradouro que o OSM frequentemente registra de outra forma. */
+const PREFIXO_DE_VIA = /^(rua|r\.|avenida|av\.?|travessa|tv\.?|alameda|praça|praca|rodovia|estrada)\s+/i;
+
+/**
+ * Variações do endereço, da mais específica para a mais ampla.
+ *
+ * A cobertura do OpenStreetMap no Brasil é irregular, e falha de dois jeitos
+ * previsíveis: raramente conhece o número da casa, e às vezes registra a via
+ * com outro tipo ("Rua Barão de Studart" não existe; "Barão de Studart" sim).
+ * Tentar nessa ordem transforma boa parte dos "não encontrado" em um pin na
+ * via certa — que, para situar o salão no mapa de uma cidade, já basta.
+ */
+function variacoes(termo: string): string[] {
+  const tentativas = [termo];
+
+  const semNumero = termo.replace(/,?\s*\b\d{1,6}\b/g, "").replace(/\s*,\s*,/g, ",").trim();
+  if (semNumero.length >= 5 && semNumero !== termo) tentativas.push(semNumero);
+
+  const semPrefixo = semNumero.replace(PREFIXO_DE_VIA, "").trim();
+  if (semPrefixo.length >= 5 && !tentativas.includes(semPrefixo)) tentativas.push(semPrefixo);
+
+  return tentativas;
+}
+
+async function consultar(termo: string, limite: number): Promise<LocalEncontrado[]> {
   const busca = new URLSearchParams({
     q: termo,
     format: "jsonv2",

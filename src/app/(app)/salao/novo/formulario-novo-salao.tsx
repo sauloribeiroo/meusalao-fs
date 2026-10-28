@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { Check, MapPin, Search, Store } from "lucide-react";
 import {
   buscarEnderecoAction,
@@ -38,6 +38,17 @@ export function FormularioNovoSalao() {
 
   const [endereco, setEndereco] = useState(estado.valores?.endereco ?? "");
   const [escolhido, setEscolhido] = useState<Local>();
+
+  /**
+   * Navegação por recarga completa, e não `router.push`: a ação acabou de
+   * trocar o cookie da sessão (o papel virou DONO_SALAO), e só uma requisição
+   * nova faz o middleware e os layouts enxergarem o papel atualizado. Uma
+   * navegação do lado do cliente reaproveitaria o estado antigo e a área do
+   * dono recusaria quem acabou de criar o salão.
+   */
+  useEffect(() => {
+    if (estado.criadoEm) window.location.href = "/salao/meu/dados";
+  }, [estado.criadoEm]);
 
   return (
     <div className="space-y-6">

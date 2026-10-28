@@ -204,6 +204,20 @@ export const ORDENACOES = ["proximidade", "nome", "preco", "nota"] as const;
 export type Ordenacao = (typeof ORDENACOES)[number];
 
 /**
+ * Texto comparável: sem acento e em minúsculas.
+ *
+ * O `mode: "insensitive"` do Prisma resolve maiúsculas, mas não acento — e
+ * ninguém digita "Salão da Márcia" com acento numa busca. Comparar assim é o
+ * que faz "marcia" encontrar "Márcia".
+ */
+const semAcento = (texto: string) =>
+  texto
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .trim()
+    .toLowerCase();
+
+/**
  * RF11, RF09 e RF10 — salões publicados, com busca, filtros e ordenação.
  *
  * Sem a permissão de geolocalização, a lista continua funcionando, ordenada por
@@ -227,16 +241,6 @@ export async function listarSaloesPublicados(
     where: {
       publicado: true,
       ...(filtros.tipo ? { tipo: { equals: filtros.tipo, mode: "insensitive" as const } } : {}),
-      // RF09: procurar "corte" acha tanto a "Barbearia Corte Fino" quanto o
-      // salão que oferece o serviço "Corte masculino".
-      ...(termo
-        ? {
-            OR: [
-              { nome: { contains: termo, mode: "insensitive" as const } },
-              { servicos: { some: { nome: { contains: termo, mode: "insensitive" as const } } } },
-            ],
-          }
-        : {}),
     },
     select: {
       id: true,
@@ -245,12 +249,24 @@ export async function listarSaloesPublicados(
       tipo: true,
       latitude: true,
       longitude: true,
-      servicos: { select: { preco: true } },
+      servicos: { select: { nome: true, preco: true } },
       avaliacoes: { select: { nota: true } },
     },
   });
 
-  const lista = saloes.map((salao) => {
+  // RF09: procurar "corte" acha tanto a "Barbearia Corte Fino" quanto o salão
+  // que oferece o serviço "Corte masculino".
+  const encontrados = termo
+    ? saloes.filter((salao) => {
+        const alvo = semAcento(termo);
+        return (
+          semAcento(salao.nome).includes(alvo) ||
+          salao.servicos.some((servico) => semAcento(servico.nome).includes(alvo))
+        );
+      })
+    : saloes;
+
+  const lista = encontrados.map((salao) => {
     const precos = salao.servicos
       .map((servico) => (servico.preco === null ? null : Number(servico.preco)))
       .filter((preco): preco is number => preco !== null);

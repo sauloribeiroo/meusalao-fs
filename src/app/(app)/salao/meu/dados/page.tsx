@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { PartyPopper } from "lucide-react";
 import { auth } from "@/auth";
 import { FormularioSalao } from "@/app/(app)/salao/meu/dados/formulario-salao";
 import { Publicacao } from "@/app/(app)/salao/meu/dados/publicacao";
@@ -14,12 +13,7 @@ import {
 export const metadata: Metadata = { title: "Dados do salão | MeuSalão" };
 
 /** RF07 — dados cadastrais do salão. */
-export default async function DadosDoSalaoPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ criado?: string }>;
-}) {
-  const { criado } = await searchParams;
+export default async function DadosDoSalaoPage() {
   const sessao = await auth();
   const resumo = await salaoDoDono(sessao!.user.id);
 
@@ -32,16 +26,6 @@ export default async function DadosDoSalaoPage({
 
   return (
     <div className="space-y-6">
-      {criado && (
-        <p className="flex items-start gap-2 rounded-lg bg-emerald-50 px-3 py-3 text-sm text-emerald-800">
-          <PartyPopper className="mt-0.5 size-4 shrink-0" aria-hidden />
-          <span>
-            Salão criado. Cadastre ao menos um serviço e marque os horários de funcionamento — aí o
-            botão de publicar libera.
-          </span>
-        </p>
-      )}
-
       <Card>
         <CardHeader>
           <CardTitle>Publicação</CardTitle>
