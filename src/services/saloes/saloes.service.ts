@@ -1,3 +1,4 @@
+import type { DiaSemana } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { ErroDeAutorizacao, ErroDeConflito, ErroDeValidacao, ErroNaoEncontrado } from "@/services/erros";
 import { coordenadaValida, distanciaEmKm, type Coordenada } from "@/services/saloes/distancia";
@@ -236,6 +237,86 @@ export async function listarSaloesPublicados(origem?: Coordenada | null): Promis
 
     return a.nome.localeCompare(b.nome, "pt-BR");
   });
+}
+
+export type PerfilPublico = {
+  id: string;
+  nome: string;
+  descricao: string | null;
+  endereco: string;
+  telefone: string | null;
+  tipo: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  distanciaKm: number | null;
+  notaMedia: number | null;
+  totalAvaliacoes: number;
+  servicos: { id: string; nome: string; preco: number | null; duracaoMin: number }[];
+  horarios: { diaSemana: DiaSemana; horaAbertura: string; horaFechamento: string }[];
+};
+
+/**
+ * RF14 — perfil público do salão.
+ *
+ * Só devolve salão publicado (RGN05); fora isso responde como inexistente, em
+ * vez de "não publicado", para a URL não confirmar que o salão existe antes de
+ * o dono decidir publicá-lo.
+ *
+ * `donoId` não entra no retorno: a tela não precisa, e o que não sai daqui não
+ * vaza na serialização do Server Component.
+ */
+export async function buscarPerfilPublico(salaoId: string, origem?: Coordenada | null): Promise<PerfilPublico> {
+  const salao = await prisma.salao.findUnique({
+    where: { id: salaoId },
+    select: {
+      id: true,
+      nome: true,
+      descricao: true,
+      endereco: true,
+      telefone: true,
+      tipo: true,
+      latitude: true,
+      longitude: true,
+      publicado: true,
+      servicos: {
+        select: { id: true, nome: true, preco: true, duracaoMin: true },
+        orderBy: { criadoEm: "asc" },
+      },
+      horarios: {
+        where: { ativo: true },
+        select: { diaSemana: true, horaAbertura: true, horaFechamento: true },
+      },
+      avaliacoes: { select: { nota: true } },
+    },
+  });
+
+  if (!salao || !salao.publicado) throw new ErroNaoEncontrado("Salão não encontrado");
+
+  const notas = salao.avaliacoes.map((avaliacao) => avaliacao.nota);
+
+  return {
+    id: salao.id,
+    nome: salao.nome,
+    descricao: salao.descricao,
+    endereco: salao.endereco,
+    telefone: salao.telefone,
+    tipo: salao.tipo,
+    latitude: salao.latitude,
+    longitude: salao.longitude,
+    distanciaKm:
+      origem && coordenadaValida(salao.latitude, salao.longitude)
+        ? distanciaEmKm(origem, { latitude: salao.latitude!, longitude: salao.longitude! })
+        : null,
+    notaMedia: notas.length ? notas.reduce((a, b) => a + b, 0) / notas.length : null,
+    totalAvaliacoes: notas.length,
+    servicos: salao.servicos.map((servico) => ({
+      id: servico.id,
+      nome: servico.nome,
+      preco: servico.preco === null ? null : Number(servico.preco),
+      duracaoMin: servico.duracaoMin,
+    })),
+    horarios: salao.horarios,
+  };
 }
 
 export type SalaoComparado = {

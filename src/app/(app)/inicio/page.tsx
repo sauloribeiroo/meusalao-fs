@@ -209,7 +209,7 @@ export default async function InicioPage() {
             <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {saloes.map((salao) => (
                 <li key={salao.id}>
-                  <Link href={`/salao/${salao.id}/agendar`} className="block h-full">
+                  <Link href={`/salao/${salao.id}`} className="block h-full">
                     <Card className="h-full transition-colors hover:border-primary">
                       <CardContent className="p-5">
                         <p className="font-medium">{salao.nome}</p>

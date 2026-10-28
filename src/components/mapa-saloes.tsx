@@ -90,7 +90,7 @@ export function MapaSaloes({
           .addTo(mapa.current!)
           .bindPopup(
             `<strong>${salao.nome}</strong>${distancia}<br>${preco}<br>
-             <a href="/salao/${salao.id}/agendar" style="color:#7c3aed;font-weight:600">Agendar →</a>`,
+             <a href="/salao/${salao.id}" style="color:#7c3aed;font-weight:600">Ver salão →</a>`,
           );
 
         marcadores.current.push(marca);

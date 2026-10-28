@@ -125,7 +125,7 @@ export function ExploradorDeSaloes({ iniciais }: { iniciais: SalaoNaLista[] }) {
               <li key={salao.id}>
                 <Card className={cn("h-full transition-colors", marcado && "border-primary")}>
                   <CardContent className="flex h-full flex-col p-5">
-                    <Link href={`/salao/${salao.id}/agendar`} className="flex-1">
+                    <Link href={`/salao/${salao.id}`} className="flex-1">
                       <div className="flex items-start justify-between gap-2">
                         <p className="font-medium">{salao.nome}</p>
                         {salao.distanciaKm !== null && (

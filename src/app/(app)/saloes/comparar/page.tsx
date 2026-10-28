@@ -90,7 +90,7 @@ export default async function CompararPage({
                     <span className="block font-semibold">{salao.nome}</span>
                     {salao.tipo && <span className="block text-xs font-normal text-primary">{salao.tipo}</span>}
                     <Link
-                      href={`/salao/${salao.id}/agendar`}
+                      href={`/salao/${salao.id}`}
                       className="mt-2 inline-block text-xs font-semibold text-primary hover:underline"
                     >
                       Agendar neste salão →
