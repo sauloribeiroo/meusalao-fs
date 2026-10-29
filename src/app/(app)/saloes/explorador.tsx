@@ -21,7 +21,9 @@ import {
 const MapaSaloes = dynamic(() => import("@/components/mapa-saloes").then((m) => m.MapaSaloes), {
   ssr: false,
   loading: () => (
-    <div className="flex h-[26rem] items-center justify-center rounded-xl border border-border bg-muted">
+    // Mesma altura do mapa de verdade: diferente, a tela saltaria quando ele
+    // terminasse de carregar.
+    <div className="flex h-[26rem] items-center justify-center rounded-xl border border-border bg-muted sm:h-[70vh] sm:max-h-[40rem] sm:min-h-[26rem]">
       <Loader2 className="size-5 animate-spin text-muted-foreground" aria-hidden />
     </div>
   ),

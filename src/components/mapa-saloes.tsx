@@ -137,7 +137,12 @@ export function MapaSaloes({
       ref={container}
       role="application"
       aria-label="Mapa com os salões disponíveis"
-      className="h-[26rem] w-full overflow-hidden rounded-xl border border-border"
+      // No celular a altura é fixa, e o mapa sai em retrato — cabe na tela sem
+      // rolagem, o que importa porque arrastar o dedo sobre o mapa move o mapa,
+      // não a página. Em tela larga esses mesmos 26rem viravam uma faixa de
+      // quase 3:1, com meio quarteirão na vertical; daí a altura proporcional à
+      // janela a partir de sm, com teto para não passar da tela em monitor alto.
+      className="h-[26rem] w-full overflow-hidden rounded-xl border border-border sm:h-[70vh] sm:max-h-[40rem] sm:min-h-[26rem]"
     />
   );
 }
