@@ -5,6 +5,8 @@ import { useFormStatus } from "react-dom";
 import { UserPlus } from "lucide-react";
 import { cadastrarAction, type EstadoFormulario } from "@/acoes/sessao";
 import { Campo } from "@/components/campo";
+import { CampoSenha } from "@/components/campo-senha";
+import { aoDigitarTelefone } from "@/lib/telefone";
 import { AlertaErro } from "@/components/ui/alerta";
 import { Button } from "@/components/ui/button";
 
@@ -35,17 +37,26 @@ export function FormularioCadastro() {
         name="telefone"
         type="tel"
         autoComplete="tel"
+        placeholder="(85) 99999-0000"
+        onChange={aoDigitarTelefone}
         defaultValue={valores.telefone}
         erro={erros.telefone?.[0]}
       />
-      <Campo
+      <CampoSenha
         label="Senha"
         name="senha"
-        type="password"
         autoComplete="new-password"
         required
         placeholder="Mínimo 8 caracteres, com letras e números"
         erro={erros.senha?.[0]}
+      />
+      <CampoSenha
+        label="Confirmar senha"
+        name="confirmacaoSenha"
+        autoComplete="new-password"
+        required
+        placeholder="Digite a senha novamente"
+        erro={erros.confirmacaoSenha?.[0]}
       />
 
       {estado.mensagem && <AlertaErro>{estado.mensagem}</AlertaErro>}

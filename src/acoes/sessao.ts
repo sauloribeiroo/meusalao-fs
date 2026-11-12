@@ -58,6 +58,12 @@ export async function cadastrarAction(_estado: EstadoFormulario, formData: FormD
   const dados = Object.fromEntries(formData);
   const valores = valoresDe(formData, ["nome", "email", "telefone"]);
 
+  // Conferida antes de chamar o serviço: a confirmação é só da tela, o
+  // serviço de usuários continua recebendo uma senha única.
+  if (formData.get("senha") !== formData.get("confirmacaoSenha")) {
+    return { valores, erros: { confirmacaoSenha: ["As senhas não coincidem"] } };
+  }
+
   try {
     await cadastrarUsuario(dados);
     // Conta criada: já entra com as mesmas credenciais.

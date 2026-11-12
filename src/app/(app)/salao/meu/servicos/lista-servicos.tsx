@@ -49,6 +49,8 @@ export function ListaServicos({ servicos }: { servicos: ServicoDaLista[] }) {
 
 function ItemServico({ servico, aoEditar }: { servico: ServicoDaLista; aoEditar: () => void }) {
   const [estado, acao, removendo] = useActionState(removerServicoAction, INICIAL);
+  // Excluir não se desfaz: o primeiro clique só pergunta, o segundo exclui.
+  const [confirmando, setConfirmando] = useState(false);
 
   return (
     <Card>
@@ -68,26 +70,44 @@ function ItemServico({ servico, aoEditar }: { servico: ServicoDaLista; aoEditar:
           {estado.mensagem && <AlertaErro className="mt-2">{estado.mensagem}</AlertaErro>}
         </div>
 
-        <div className="flex items-center gap-2">
-          <Button type="button" variant="outline" size="sm" onClick={aoEditar}>
-            <Pencil aria-hidden />
-            Editar
-          </Button>
-          <form action={acao}>
-            <input type="hidden" name="servicoId" value={servico.id} />
+        {confirmando ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-sm font-medium">Excluir este serviço?</p>
+            <form action={acao}>
+              <input type="hidden" name="servicoId" value={servico.id} />
+              <Button type="submit" variant="destructive" size="sm" disabled={removendo}>
+                {removendo ? "Excluindo..." : "Sim, excluir"}
+              </Button>
+            </form>
             <Button
-              type="submit"
+              type="button"
               variant="ghost"
               size="sm"
               disabled={removendo}
+              onClick={() => setConfirmando(false)}
+            >
+              Manter
+            </Button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            <Button type="button" variant="outline" size="sm" onClick={aoEditar}>
+              <Pencil aria-hidden />
+              Editar
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setConfirmando(true)}
               aria-label={`Excluir ${servico.nome}`}
               className="text-destructive hover:bg-destructive/10 hover:text-destructive"
             >
               <Trash2 aria-hidden />
-              {removendo ? "Excluindo..." : "Excluir"}
+              Excluir
             </Button>
-          </form>
-        </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
