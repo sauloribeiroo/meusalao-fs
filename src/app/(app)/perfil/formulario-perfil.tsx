@@ -8,6 +8,7 @@ import { Campo } from "@/components/campo";
 import { FormularioSalvo } from "@/components/formulario-salvo";
 import { AlertaErro } from "@/components/ui/alerta";
 import { Button } from "@/components/ui/button";
+import { aoDigitarTelefone } from "@/lib/telefone";
 
 const INICIAL: EstadoEdicao = {};
 
@@ -57,6 +58,7 @@ export function FormularioPerfil({ perfil }: { perfil: PerfilDoUsuario }) {
         type="tel"
         autoComplete="tel"
         placeholder="(85) 99999-0000"
+        onChange={aoDigitarTelefone}
         defaultValue={estado.valores?.telefone ?? perfil.telefone ?? ""}
         erro={estado.erros?.telefone?.[0]}
       />

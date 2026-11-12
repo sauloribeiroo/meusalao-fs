@@ -6,6 +6,7 @@ import { UserPlus } from "lucide-react";
 import { cadastrarAction, type EstadoFormulario } from "@/acoes/sessao";
 import { Campo } from "@/components/campo";
 import { CampoSenha } from "@/components/campo-senha";
+import { aoDigitarTelefone } from "@/lib/telefone";
 import { AlertaErro } from "@/components/ui/alerta";
 import { Button } from "@/components/ui/button";
 
@@ -36,6 +37,8 @@ export function FormularioCadastro() {
         name="telefone"
         type="tel"
         autoComplete="tel"
+        placeholder="(85) 99999-0000"
+        onChange={aoDigitarTelefone}
         defaultValue={valores.telefone}
         erro={erros.telefone?.[0]}
       />
