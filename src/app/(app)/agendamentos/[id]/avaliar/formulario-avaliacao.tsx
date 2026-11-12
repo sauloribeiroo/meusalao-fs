@@ -18,9 +18,12 @@ const DESCRICAO_DA_NOTA = ["Péssimo", "Ruim", "Regular", "Bom", "Excelente"];
 export function FormularioAvaliacao({ agendamentoId }: { agendamentoId: string }) {
   const [estado, acao] = useActionState(avaliarAction, INICIAL);
   const [nota, setNota] = useState(0);
+  const [tamanhoComentario, setTamanhoComentario] = useState(0);
 
   return (
-    <form action={acao} className="space-y-6" noValidate>
+    // onReset: o React limpa o formulário depois da action, e o contador
+    // precisa voltar a zero junto com o texto.
+    <form action={acao} onReset={() => setTamanhoComentario(0)} className="space-y-6" noValidate>
       <input type="hidden" name="agendamentoId" value={agendamentoId} />
       <input type="hidden" name="nota" value={nota || ""} />
 
@@ -66,9 +69,20 @@ export function FormularioAvaliacao({ agendamentoId }: { agendamentoId: string }
           rows={4}
           maxLength={COMENTARIO_MAXIMO}
           placeholder="O que achou do atendimento?"
+          onChange={(evento) => setTamanhoComentario(evento.currentTarget.value.length)}
           aria-invalid={Boolean(estado.erros?.comentario)}
+          aria-describedby="comentario-contador"
           className="flex w-full rounded-lg border border-input bg-card px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         />
+        <p
+          id="comentario-contador"
+          className={cn(
+            "text-right text-xs",
+            tamanhoComentario >= COMENTARIO_MAXIMO ? "font-medium text-destructive" : "text-muted-foreground",
+          )}
+        >
+          {tamanhoComentario}/{COMENTARIO_MAXIMO}
+        </p>
         {estado.erros?.comentario?.[0] && (
           <p className="text-xs text-destructive">{estado.erros.comentario[0]}</p>
         )}
