@@ -20,6 +20,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { prisma } from "@/lib/prisma";
+import { salaoDoDono } from "@/services/saloes/saloes.service";
 
 export const metadata: Metadata = { title: "Início | MeuSalão" };
 
@@ -36,10 +37,14 @@ const CATEGORIAS = [
 export default async function InicioPage() {
   const sessao = await auth();
   const primeiroNome = sessao?.user.nome.split(" ")[0] ?? "";
-  const ehDono = sessao?.user.papel === "DONO_SALAO" || sessao?.user.papel === "ADMIN";
 
-  // Lista mínima para alcançar o agendamento. A busca por nome e serviço, os
-  // filtros e o mapa são as issues #10 e #11 — ainda não entraram.
+  // A gestão aparece para quem TEM salão, não para quem tem o papel: o
+  // administrador carrega papel de dono em toda checagem (RGN07) mas em geral
+  // não tem salão nenhum, e os quatro atalhos levavam todos a "Nenhum salão
+  // cadastrado". Vale também para o dono cujo salão foi removido.
+  const salaoDoUsuario = sessao?.user.id ? await salaoDoDono(sessao.user.id) : null;
+  const ehDono = salaoDoUsuario !== null;
+
   // RGN05: só salão publicado aparece.
   const saloes = await prisma.salao.findMany({
     where: { publicado: true },
