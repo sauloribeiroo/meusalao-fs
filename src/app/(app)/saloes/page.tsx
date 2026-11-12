@@ -29,7 +29,7 @@ export default async function SaloesPage({
   return (
     <>
       <header className="bg-brand-dark">
-        <div className="mx-auto max-w-7xl px-6 py-10">
+        <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
           <h1 className="text-3xl font-black tracking-tight text-white">Salões disponíveis</h1>
           <p className="mt-1 text-white/70">
             Veja quem está perto de você e agende sem precisar ligar.
@@ -37,7 +37,7 @@ export default async function SaloesPage({
         </div>
       </header>
 
-      <main className="mx-auto max-w-7xl px-6 py-8">
+      <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
         <ExploradorDeSaloes iniciais={saloes} tipos={tipos} termoInicial={termo} />
       </main>
     </>
