@@ -1,4 +1,4 @@
-import type { Papel } from "@prisma/client";
+import type { Papel, StatusAgendamento } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { ErroDeConflito, ErroDeValidacao, ErroNaoEncontrado } from "@/services/erros";
 import {
@@ -15,26 +15,77 @@ import {
  * sobretudo as que impedem o administrador de se trancar para fora.
  */
 
+/** Nota a partir da qual uma avaliação entra na fila de moderação. */
+export const NOTA_BAIXA = 2;
+
+const DIAS_RECENTES = 7;
+
 export type ResumoDaPlataforma = {
   usuarios: number;
   donos: number;
+  /** Contas criadas nos últimos 7 dias — mostra se a plataforma cresce. */
+  usuariosNovos: number;
   saloes: number;
   saloesPublicados: number;
+  /** Cadastrados e ainda fora do ar: é onde o admin pode ajudar o dono. */
+  saloesAguardando: number;
   agendamentos: number;
+  /** Contagem por status, para o gráfico. */
+  agendamentosPorStatus: Record<StatusAgendamento, number>;
   avaliacoes: number;
+  /** Avaliações nota 1 ou 2 — fila de moderação prioritária. */
+  avaliacoesBaixas: number;
+  notaMedia: number | null;
 };
 
 export async function resumoDaPlataforma(): Promise<ResumoDaPlataforma> {
-  const [usuarios, donos, saloes, saloesPublicados, agendamentos, avaliacoes] = await Promise.all([
+  const desde = new Date(Date.now() - DIAS_RECENTES * 24 * 60 * 60 * 1000);
+
+  const [
+    usuarios,
+    donos,
+    usuariosNovos,
+    saloes,
+    saloesPublicados,
+    agendamentos,
+    porStatus,
+    avaliacoes,
+    avaliacoesBaixas,
+    media,
+  ] = await Promise.all([
     prisma.usuario.count(),
     prisma.usuario.count({ where: { papel: "DONO_SALAO" } }),
+    prisma.usuario.count({ where: { criadoEm: { gte: desde } } }),
     prisma.salao.count(),
     prisma.salao.count({ where: { publicado: true } }),
     prisma.agendamento.count(),
+    prisma.agendamento.groupBy({ by: ["status"], _count: { _all: true } }),
     prisma.avaliacao.count(),
+    prisma.avaliacao.count({ where: { nota: { lte: NOTA_BAIXA } } }),
+    prisma.avaliacao.aggregate({ _avg: { nota: true } }),
   ]);
 
-  return { usuarios, donos, saloes, saloesPublicados, agendamentos, avaliacoes };
+  // groupBy só devolve os status que existem; o gráfico precisa dos quatro,
+  // senão uma categoria vazia some em vez de aparecer zerada.
+  const agendamentosPorStatus = { PENDENTE: 0, CONFIRMADO: 0, CANCELADO: 0, CONCLUIDO: 0 } as Record<
+    StatusAgendamento,
+    number
+  >;
+  for (const linha of porStatus) agendamentosPorStatus[linha.status] = linha._count._all;
+
+  return {
+    usuarios,
+    donos,
+    usuariosNovos,
+    saloes,
+    saloesPublicados,
+    saloesAguardando: saloes - saloesPublicados,
+    agendamentos,
+    agendamentosPorStatus,
+    avaliacoes,
+    avaliacoesBaixas,
+    notaMedia: media._avg.nota,
+  };
 }
 
 export type UsuarioAdmin = {
