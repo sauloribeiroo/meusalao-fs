@@ -4,8 +4,13 @@ import { Button } from "@/components/ui/button";
 /** Dispara o fluxo OAuth do Google via Server Action (funciona sem JS). */
 export function BotaoGoogle({ rotulo }: { rotulo: string }) {
   return (
-    <form action={entrarComGoogleAction}>
-      <Button type="submit" variant="outline" size="lg" className="w-full">
+    <form action={entrarComGoogleAction} className="w-full">
+      <Button
+        type="submit"
+        variant="outline"
+        size="lg"
+        className="h-12 w-full rounded-xl border border-gray-200 bg-white text-sm font-semibold text-foreground shadow-xs transition-colors hover:bg-gray-50/90 hover:border-gray-300 hover:text-foreground"
+      >
         <IconeGoogle />
         {rotulo}
       </Button>
