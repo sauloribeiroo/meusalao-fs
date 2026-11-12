@@ -4,6 +4,7 @@ import {
   Baby,
   CalendarCheck,
   CalendarClock,
+  Clock,
   Hand,
   LayoutDashboard,
   MapPin,
@@ -13,6 +14,7 @@ import {
   Search,
   Sparkles,
   SprayCan,
+  Star,
   Store,
 } from "lucide-react";
 import { auth } from "@/auth";
@@ -55,52 +57,94 @@ export default async function InicioPage() {
 
   return (
     <>
-      <header className="bg-brand-dark">
-        <div className="mx-auto max-w-7xl px-6 py-14">
-          <p className="mb-2 font-semibold text-white/70">Olá, {primeiroNome} 👋</p>
-          <h1 className="max-w-2xl text-4xl font-black tracking-tight text-white md:text-5xl">
-            Encontre o salão perfeito perto de você
-          </h1>
+      <header className="w-full bg-brand-dark">
+        <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6 md:py-16 lg:px-8 lg:py-20">
+          <div className="grid grid-cols-1 items-center gap-10 lg:grid-cols-12 lg:gap-12">
+            <div className="lg:col-span-7">
+              <p className="mb-2.5 text-base font-semibold text-white/85">
+                Olá, {primeiroNome} 👋
+              </p>
+              <h1 className="max-w-[560px] text-4xl font-black tracking-tight text-white sm:text-5xl md:leading-tight">
+                Encontre o salão perfeito perto de você
+              </h1>
 
-          {/* RF09 — busca por GET: o termo vai na URL de /saloes, então o
-              resultado é compartilhável e não exige estado no cliente. */}
-          <form action="/saloes" className="mt-8 max-w-xl">
-            <div className="relative">
-              <Search
-                className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
-                aria-hidden
-              />
-              <Input
-                type="search"
-                name="termo"
-                placeholder="Buscar salão ou serviço"
-                aria-label="Buscar salão ou serviço"
-                className="h-12 border-transparent bg-card pl-9 pr-24"
-              />
-              <button
-                type="submit"
-                className="absolute right-1.5 top-1/2 h-9 -translate-y-1/2 rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
-              >
-                Buscar
-              </button>
+              {/* RF09 — busca por GET: o termo vai na URL de /saloes, então o
+                  resultado é compartilhável e não exige estado no cliente. */}
+              <form action="/saloes" className="mt-8 max-w-[560px]">
+                <div className="relative">
+                  <Search
+                    className="pointer-events-none absolute left-4 top-1/2 size-5 -translate-y-1/2 text-muted-foreground"
+                    aria-hidden
+                  />
+                  <Input
+                    type="search"
+                    name="termo"
+                    placeholder="Buscar salão ou serviço"
+                    aria-label="Buscar salão ou serviço"
+                    className="h-14 w-full rounded-2xl border-0 bg-card pl-12 pr-28 text-base shadow-lg shadow-black/10 placeholder:text-muted-foreground/70 focus-visible:ring-2 focus-visible:ring-white/40"
+                  />
+                  <button
+                    type="submit"
+                    className="absolute right-2 top-1/2 h-10 -translate-y-1/2 rounded-xl bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-sm transition-all duration-150 hover:bg-primary/90 active:scale-95"
+                  >
+                    Buscar
+                  </button>
+                </div>
+              </form>
             </div>
-          </form>
+
+            <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-3 lg:col-span-5 lg:grid-cols-1" aria-hidden="true">
+              <div className="flex items-center gap-4 rounded-2xl border border-white/15 bg-white/10 p-4 backdrop-blur-sm">
+                <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-white/15 text-white">
+                  <MapPin className="size-5" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-white">Salões perto de você</p>
+                  <p className="text-xs text-white/80">Explore profissionais da sua região</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-4 rounded-2xl border border-white/15 bg-white/10 p-4 backdrop-blur-sm">
+                <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-white/15 text-white">
+                  <Clock className="size-5" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-white">Agende em 1 minuto</p>
+                  <p className="text-xs text-white/80">Escolha o serviço e o melhor horário</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-4 rounded-2xl border border-white/15 bg-white/10 p-4 backdrop-blur-sm">
+                <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-white/15 text-white">
+                  <Star className="size-5" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-white">Avaliações reais</p>
+                  <p className="text-xs text-white/80">Notas de clientes que já foram ao salão</p>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </header>
 
-      <main className="mx-auto max-w-7xl px-6 py-10">
+      <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
         <section aria-labelledby="categorias">
-          <h2 id="categorias" className="mb-4 text-lg font-semibold">
+          <h2 id="categorias" className="mb-4 text-lg font-bold tracking-tight text-foreground">
             Categorias
           </h2>
           <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
             {CATEGORIAS.map(({ nome, Icone }) => (
               <li key={nome}>
                 {/* Cada categoria é uma busca pronta pelo nome do serviço. */}
-                <Link href={`/saloes?termo=${encodeURIComponent(nome)}`} className="block">
-                  <Card className="p-4 text-center transition-colors hover:border-primary">
-                    <Icone className="mx-auto mb-2 size-5 text-primary" aria-hidden />
-                    <span className="text-sm font-medium">{nome}</span>
+                <Link href={`/saloes?termo=${encodeURIComponent(nome)}`} className="group block h-full">
+                  <Card className="flex h-full flex-col items-center justify-center rounded-[16px] p-4 text-center transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-primary hover:shadow-md">
+                    <div className="mb-2.5 flex size-12 items-center justify-center rounded-full bg-primary/10 transition-colors group-hover:bg-primary/15">
+                      <Icone className="size-5 text-primary transition-transform duration-200 group-hover:scale-110" aria-hidden />
+                    </div>
+                    <span className="text-sm font-semibold text-foreground transition-colors group-hover:text-primary">
+                      {nome}
+                    </span>
                   </Card>
                 </Link>
               </li>
@@ -110,17 +154,19 @@ export default async function InicioPage() {
 
         {ehDono && (
           <section aria-labelledby="meu-salao" className="mt-10">
-            <h2 id="meu-salao" className="mb-4 text-lg font-semibold">
+            <h2 id="meu-salao" className="mb-4 text-lg font-bold tracking-tight text-foreground">
               Meu salão
             </h2>
-            <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <li>
-                <Link href="/salao/meu/painel" className="block">
-                  <Card className="transition-colors hover:border-primary">
-                    <CardContent className="flex items-center gap-3 p-5">
-                      <LayoutDashboard className="size-5 text-primary" aria-hidden />
+                <Link href="/salao/meu/painel" className="group block">
+                  <Card className="rounded-[16px] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-primary hover:shadow-md">
+                    <CardContent className="flex items-center gap-3.5 p-5">
+                      <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                        <LayoutDashboard className="size-5" aria-hidden />
+                      </div>
                       <div>
-                        <p className="font-medium">Painel</p>
+                        <p className="font-semibold text-foreground transition-colors group-hover:text-primary">Painel</p>
                         <p className="text-sm text-muted-foreground">Métricas e agenda do dia.</p>
                       </div>
                     </CardContent>
@@ -128,12 +174,14 @@ export default async function InicioPage() {
                 </Link>
               </li>
               <li>
-                <Link href="/salao/meu/agenda" className="block">
-                  <Card className="transition-colors hover:border-primary">
-                    <CardContent className="flex items-center gap-3 p-5">
-                      <CalendarCheck className="size-5 text-primary" aria-hidden />
+                <Link href="/salao/meu/agenda" className="group block">
+                  <Card className="rounded-[16px] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-primary hover:shadow-md">
+                    <CardContent className="flex items-center gap-3.5 p-5">
+                      <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                        <CalendarCheck className="size-5" aria-hidden />
+                      </div>
                       <div>
-                        <p className="font-medium">Agenda</p>
+                        <p className="font-semibold text-foreground transition-colors group-hover:text-primary">Agenda</p>
                         <p className="text-sm text-muted-foreground">Confirme ou recuse pedidos.</p>
                       </div>
                     </CardContent>
@@ -141,12 +189,14 @@ export default async function InicioPage() {
                 </Link>
               </li>
               <li>
-                <Link href="/salao/meu/servicos" className="block">
-                  <Card className="transition-colors hover:border-primary">
-                    <CardContent className="flex items-center gap-3 p-5">
-                      <Scissors className="size-5 text-primary" aria-hidden />
+                <Link href="/salao/meu/servicos" className="group block">
+                  <Card className="rounded-[16px] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-primary hover:shadow-md">
+                    <CardContent className="flex items-center gap-3.5 p-5">
+                      <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                        <Scissors className="size-5" aria-hidden />
+                      </div>
                       <div>
-                        <p className="font-medium">Serviços</p>
+                        <p className="font-semibold text-foreground transition-colors group-hover:text-primary">Serviços</p>
                         <p className="text-sm text-muted-foreground">Cadastre nome, preço e duração.</p>
                       </div>
                     </CardContent>
@@ -154,12 +204,14 @@ export default async function InicioPage() {
                 </Link>
               </li>
               <li>
-                <Link href="/salao/meu/horarios" className="block">
-                  <Card className="transition-colors hover:border-primary">
-                    <CardContent className="flex items-center gap-3 p-5">
-                      <CalendarClock className="size-5 text-primary" aria-hidden />
+                <Link href="/salao/meu/horarios" className="group block">
+                  <Card className="rounded-[16px] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-primary hover:shadow-md">
+                    <CardContent className="flex items-center gap-3.5 p-5">
+                      <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                        <CalendarClock className="size-5" aria-hidden />
+                      </div>
                       <div>
-                        <p className="font-medium">Horários</p>
+                        <p className="font-semibold text-foreground transition-colors group-hover:text-primary">Horários</p>
                         <p className="text-sm text-muted-foreground">Defina quando o salão abre.</p>
                       </div>
                     </CardContent>
@@ -175,16 +227,22 @@ export default async function InicioPage() {
             <h2 id="tem-salao" className="sr-only">
               Tem um salão?
             </h2>
-            <Card>
-              <CardContent className="flex flex-wrap items-center justify-between gap-4 p-5">
+            <Card className="rounded-[16px] shadow-xs">
+              <CardContent className="flex flex-col justify-between gap-4 p-5 sm:flex-row sm:items-center sm:p-6">
                 <div className="min-w-0">
-                  <p className="font-medium">Você tem um salão?</p>
-                  <p className="mt-0.5 text-sm text-muted-foreground">
+                  <p className="text-base font-semibold text-foreground">Você tem um salão?</p>
+                  <p className="mt-1 text-sm text-muted-foreground leading-relaxed">
                     Cadastre o seu e comece a receber agendamentos pelo MeuSalão.
                   </p>
                 </div>
-                <Link href="/salao/novo" className={buttonVariants({ size: "sm" })}>
-                  <Store aria-hidden />
+                <Link
+                  href="/salao/novo"
+                  className={buttonVariants({
+                    size: "default",
+                    className: "h-10 shrink-0 rounded-xl px-5 font-semibold shadow-xs transition-all duration-150 active:scale-95",
+                  })}
+                >
+                  <Store className="size-4" aria-hidden />
                   Cadastrar salão
                 </Link>
               </CardContent>
@@ -193,41 +251,57 @@ export default async function InicioPage() {
         )}
 
         <section aria-labelledby="proximos" className="mt-10">
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-            <h2 id="proximos" className="text-lg font-semibold">
+          <div className="mb-5 flex items-center justify-between gap-3">
+            <h2 id="proximos" className="text-lg font-bold tracking-tight text-foreground">
               Salões disponíveis
             </h2>
             <Link
               href="/saloes"
-              className={buttonVariants({ variant: "outline", size: "sm" })}
+              className={buttonVariants({
+                variant: "outline",
+                size: "sm",
+                className: "h-9 rounded-xl px-3.5 text-xs font-semibold shadow-xs transition-colors hover:border-gray-300",
+              })}
             >
-              <MapPinned aria-hidden />
+              <MapPinned className="size-4" aria-hidden />
               Ver no mapa
             </Link>
           </div>
 
           {saloes.length === 0 ? (
-            <Card>
-              <CardContent className="flex flex-col items-center gap-2 p-10 text-center">
-                <MapPin className="size-6 text-muted-foreground" aria-hidden />
-                <p className="text-sm text-muted-foreground">
+            <Card className="rounded-[16px]">
+              <CardContent className="flex flex-col items-center gap-2.5 p-12 text-center">
+                <div className="flex size-12 items-center justify-center rounded-full bg-muted">
+                  <MapPin className="size-6 text-muted-foreground" aria-hidden />
+                </div>
+                <p className="max-w-md text-sm text-muted-foreground leading-relaxed">
                   Nenhum salão publicado ainda. A busca por proximidade e o mapa chegam na próxima
                   entrega.
                 </p>
               </CardContent>
             </Card>
           ) : (
-            <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {saloes.map((salao) => (
                 <li key={salao.id}>
-                  <Link href={`/salao/${salao.id}`} className="block h-full">
-                    <Card className="h-full transition-colors hover:border-primary">
-                      <CardContent className="p-5">
-                        <p className="font-medium">{salao.nome}</p>
-                        {salao.tipo && <p className="mt-0.5 text-xs text-primary">{salao.tipo}</p>}
-                        <p className="mt-2 flex items-start gap-1.5 text-sm text-muted-foreground">
-                          <MapPin className="mt-0.5 size-3.5 shrink-0" aria-hidden />
-                          {salao.endereco}
+                  <Link href={`/salao/${salao.id}`} className="group block h-full">
+                    <Card className="h-full rounded-[16px] shadow-xs transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-primary hover:shadow-md">
+                      <CardContent className="flex h-full flex-col justify-between p-5 sm:p-6">
+                        <div>
+                          <p className="font-bold text-base text-foreground transition-colors duration-150 group-hover:text-primary">
+                            {salao.nome}
+                          </p>
+                          {salao.tipo && (
+                            <div className="mt-2">
+                              <span className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
+                                {salao.tipo}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                        <p className="mt-4 flex items-start gap-1.5 text-sm text-muted-foreground">
+                          <MapPin className="mt-0.5 size-3.5 shrink-0 text-muted-foreground/75" aria-hidden />
+                          <span className="line-clamp-2 leading-relaxed">{salao.endereco}</span>
                         </p>
                       </CardContent>
                     </Card>
