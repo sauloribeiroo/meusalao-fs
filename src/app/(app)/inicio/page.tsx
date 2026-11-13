@@ -8,6 +8,7 @@ import {
   Hand,
   LayoutDashboard,
   MapPin,
+  MapPinned,
   Paintbrush,
   Scissors,
   Search,
@@ -23,7 +24,6 @@ import { Input } from "@/components/ui/input";
 import { prisma } from "@/lib/prisma";
 import { salaoDoDono } from "@/services/saloes/saloes.service";
 import { EmptyState } from "./empty-state";
-import { MapModal } from "./map-modal";
 import { SalonCard } from "./salon-card";
 
 export const metadata: Metadata = { title: "Início | MeuSalão" };
@@ -53,16 +53,7 @@ export default async function InicioPage() {
   const saloes = await prisma.salao.findMany({
     where: { publicado: true },
     orderBy: { nome: "asc" },
-    // latitude/longitude alimentam o mapa do modal: sem elas ele só saberia
-    // dizer que o mapa está indisponível.
-    select: {
-      id: true,
-      nome: true,
-      endereco: true,
-      tipo: true,
-      latitude: true,
-      longitude: true,
-    },
+    select: { id: true, nome: true, endereco: true, tipo: true },
     take: 12,
   });
 
@@ -266,7 +257,19 @@ export default async function InicioPage() {
             <h2 id="proximos" className="text-lg font-bold tracking-tight text-foreground">
               Salões disponíveis
             </h2>
-            <MapModal saloes={saloes} />
+            {/* O mapa de verdade é o de /saloes: todos os salões, a posição de
+                quem está olhando e o link de cada um (RF10, RF11). */}
+            <Link
+              href="/saloes"
+              className={buttonVariants({
+                variant: "outline",
+                size: "sm",
+                className: "h-9 rounded-xl px-3.5 text-xs font-semibold shadow-xs transition-colors hover:border-gray-300",
+              })}
+            >
+              <MapPinned className="size-4" aria-hidden />
+              Ver no mapa
+            </Link>
           </div>
 
           {saloes.length === 0 ? (
