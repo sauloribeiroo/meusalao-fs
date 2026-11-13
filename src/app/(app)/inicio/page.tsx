@@ -8,7 +8,6 @@ import {
   Hand,
   LayoutDashboard,
   MapPin,
-  MapPinned,
   Paintbrush,
   Scissors,
   Search,
@@ -23,6 +22,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { prisma } from "@/lib/prisma";
 import { salaoDoDono } from "@/services/saloes/saloes.service";
+import { EmptyState } from "./empty-state";
+import { MapModal } from "./map-modal";
+import { SalonCard } from "./salon-card";
 
 export const metadata: Metadata = { title: "Início | MeuSalão" };
 
@@ -51,7 +53,16 @@ export default async function InicioPage() {
   const saloes = await prisma.salao.findMany({
     where: { publicado: true },
     orderBy: { nome: "asc" },
-    select: { id: true, nome: true, endereco: true, tipo: true },
+    // latitude/longitude alimentam o mapa do modal: sem elas ele só saberia
+    // dizer que o mapa está indisponível.
+    select: {
+      id: true,
+      nome: true,
+      endereco: true,
+      tipo: true,
+      latitude: true,
+      longitude: true,
+    },
     take: 12,
   });
 
@@ -255,57 +266,16 @@ export default async function InicioPage() {
             <h2 id="proximos" className="text-lg font-bold tracking-tight text-foreground">
               Salões disponíveis
             </h2>
-            <Link
-              href="/saloes"
-              className={buttonVariants({
-                variant: "outline",
-                size: "sm",
-                className: "h-9 rounded-xl px-3.5 text-xs font-semibold shadow-xs transition-colors hover:border-gray-300",
-              })}
-            >
-              <MapPinned className="size-4" aria-hidden />
-              Ver no mapa
-            </Link>
+            <MapModal saloes={saloes} />
           </div>
 
           {saloes.length === 0 ? (
-            <Card className="rounded-[16px]">
-              <CardContent className="flex flex-col items-center gap-2.5 p-12 text-center">
-                <div className="flex size-12 items-center justify-center rounded-full bg-muted">
-                  <MapPin className="size-6 text-muted-foreground" aria-hidden />
-                </div>
-                <p className="max-w-md text-sm text-muted-foreground leading-relaxed">
-                  Nenhum salão publicado ainda. A busca por proximidade e o mapa chegam na próxima
-                  entrega.
-                </p>
-              </CardContent>
-            </Card>
+            <EmptyState />
           ) : (
-            <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <ul className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 lg:gap-6">
               {saloes.map((salao) => (
-                <li key={salao.id}>
-                  <Link href={`/salao/${salao.id}`} className="group block h-full">
-                    <Card className="h-full rounded-[16px] shadow-xs transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-primary hover:shadow-md">
-                      <CardContent className="flex h-full flex-col justify-between p-5 sm:p-6">
-                        <div>
-                          <p className="font-bold text-base text-foreground transition-colors duration-150 group-hover:text-primary">
-                            {salao.nome}
-                          </p>
-                          {salao.tipo && (
-                            <div className="mt-2">
-                              <span className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
-                                {salao.tipo}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                        <p className="mt-4 flex items-start gap-1.5 text-sm text-muted-foreground">
-                          <MapPin className="mt-0.5 size-3.5 shrink-0 text-muted-foreground/75" aria-hidden />
-                          <span className="line-clamp-2 leading-relaxed">{salao.endereco}</span>
-                        </p>
-                      </CardContent>
-                    </Card>
-                  </Link>
+                <li key={salao.id} className="min-w-0">
+                  <SalonCard salao={salao} />
                 </li>
               ))}
             </ul>
