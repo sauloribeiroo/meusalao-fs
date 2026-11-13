@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ScissorsLineDashed } from "lucide-react";
+import { googleHabilitado } from "@/auth";
 import { BotaoGoogle } from "../botao-google";
 import { FormularioLogin } from "./formulario-login";
 
@@ -28,15 +29,20 @@ export default function LoginPage() {
       {/* Formulário com credenciais */}
       <FormularioLogin />
 
-      {/* Separador 'ou' */}
-      <div className="my-5 flex items-center gap-3 text-xs font-medium uppercase text-muted-foreground">
-        <span className="h-px flex-1 bg-gray-200" />
-        ou
-        <span className="h-px flex-1 bg-gray-200" />
-      </div>
+      {/* Só oferece o Google onde as credenciais existem: sem elas o provedor
+          nem é registrado no Auth.js, e o botão cairia na página padrão de
+          login sem fazer nada. Mesma regra da tela de cadastro. */}
+      {googleHabilitado && (
+        <>
+          <div className="my-5 flex items-center gap-3 text-xs font-medium uppercase text-muted-foreground">
+            <span className="h-px flex-1 bg-gray-200" />
+            ou
+            <span className="h-px flex-1 bg-gray-200" />
+          </div>
 
-      {/* Botão Entrar com Google */}
-      <BotaoGoogle rotulo="Entrar com Google" />
+          <BotaoGoogle rotulo="Entrar com Google" />
+        </>
+      )}
 
       {/* Rodapé com link de cadastro */}
       <p className="mt-6 text-center text-sm text-muted-foreground">
