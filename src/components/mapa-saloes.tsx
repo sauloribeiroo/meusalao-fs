@@ -19,13 +19,22 @@ import type { SalaoNaLista } from "@/services/saloes/saloes.service";
 /** Fortaleza, usada quando não há localização nem salão com coordenadas. */
 const CENTRO_PADRAO: [number, number] = [-3.7319, -38.5267];
 
-/** Marcador desenhado em HTML: evita o problema clássico de assets do Leaflet. */
-const marcador = (cor: string, rotulo: string) => `
+/**
+ * Marcador desenhado em HTML: evita o problema clássico de assets do Leaflet.
+ *
+ * Só um círculo de cor: a numeração não correspondia a nada na lista ao lado,
+ * então era um número a decifrar sem ter onde conferir.
+ */
+const TAMANHO_DO_MARCADOR = 22;
+
+const marcador = (cor: string) => `
   <span style="
-    display:flex;align-items:center;justify-content:center;
-    width:28px;height:28px;border-radius:9999px;
-    background:${cor};color:#fff;font-size:13px;font-weight:700;
-    border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4)">${rotulo}</span>`;
+    display:block;
+    width:${TAMANHO_DO_MARCADOR}px;height:${TAMANHO_DO_MARCADOR}px;border-radius:9999px;
+    background:${cor};
+    border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4)"></span>`;
+
+const ANCORA = TAMANHO_DO_MARCADOR / 2;
 
 export function MapaSaloes({
   saloes,
@@ -58,7 +67,7 @@ export function MapaSaloes({
 
       const pontos: [number, number][] = [];
 
-      saloes.forEach((salao, indice) => {
+      saloes.forEach((salao) => {
         if (salao.latitude === null || salao.longitude === null) return;
 
         const ponto: [number, number] = [salao.latitude, salao.longitude];
@@ -81,10 +90,10 @@ export function MapaSaloes({
         const marca = L.marker(ponto, {
           title: salao.nome,
           icon: L.divIcon({
-            html: marcador("#7c3aed", String(indice + 1)),
+            html: marcador("#7c3aed"),
             className: "",
-            iconSize: [28, 28],
-            iconAnchor: [14, 14],
+            iconSize: [TAMANHO_DO_MARCADOR, TAMANHO_DO_MARCADOR],
+            iconAnchor: [ANCORA, ANCORA],
           }),
         })
           .addTo(mapa.current!)
@@ -100,10 +109,10 @@ export function MapaSaloes({
         const aqui = L.marker([origem.latitude, origem.longitude], {
           title: "Você está aqui",
           icon: L.divIcon({
-            html: marcador("#059669", "•"),
+            html: marcador("#059669"),
             className: "",
-            iconSize: [28, 28],
-            iconAnchor: [14, 14],
+            iconSize: [TAMANHO_DO_MARCADOR, TAMANHO_DO_MARCADOR],
+            iconAnchor: [ANCORA, ANCORA],
           }),
         })
           .addTo(mapa.current)

@@ -6,8 +6,6 @@ export function SalonCardSkeleton() {
       className="flex h-full flex-col overflow-hidden rounded-2xl border-border bg-card shadow-xs"
       aria-hidden="true"
     >
-      <div className="aspect-video w-full animate-pulse bg-muted" />
-
       <CardContent className="flex flex-1 flex-col justify-between p-5">
         <div className="space-y-3">
           <div className="h-5 w-3/4 animate-pulse rounded-md bg-muted" />
